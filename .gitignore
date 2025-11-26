@@ -209,3 +209,16 @@ __marimo__/
 # Ignore data folder
 /data/
 /ppt/
+
+# Model files
+/models/
+models/*.pkl
+models/*.json
+
+# Data files
+data/*.csv
+
+# Output files
+/output/
+output/*.png
+output/*.csv
