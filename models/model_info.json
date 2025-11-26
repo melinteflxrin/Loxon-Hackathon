@@ -1,0 +1,24 @@
+{
+    "feature_columns": [
+        "order_id_nunique",
+        "payment_id_count",
+        "amount_sum",
+        "amount_mean",
+        "amount_median",
+        "amount_std",
+        "amount_order_sum",
+        "amount_order_mean",
+        "amount_order_median",
+        "payment_delay_days_mean",
+        "payment_delay_days_median",
+        "payment_delay_days_min",
+        "payment_delay_days_max",
+        "payment_delay_days_std",
+        "recency_days",
+        "customer_lifetime_days",
+        "payment_frequency"
+    ],
+    "model_name": "Gradient Boosting",
+    "test_accuracy": 1.0,
+    "test_f1": 1.0
+}

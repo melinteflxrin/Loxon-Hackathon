@@ -117,7 +117,7 @@ def main():
     # Add page selection
     page = st.sidebar.radio(
         "Select View",
-        ["📊 Customer Segmentation", "🚨 Anomaly & Fraud Detection", "📈 Combined Analysis"]
+        ["📊 Customer Segmentation", "🚨 Anomaly & Fraud Detection", "📈 Combined Analysis", "🎯 Segment Predictor"]
     )
     
     st.sidebar.markdown("---")
@@ -144,6 +144,8 @@ def main():
         show_segmentation_page(filtered_df, selected_segments, available_segments)
     elif page == "🚨 Anomaly & Fraud Detection":
         show_fraud_detection_page(customer_anomaly, transaction_fraud, df)
+    elif page == "🎯 Segment Predictor":
+        show_prediction_page()
     else:
         show_combined_analysis_page(filtered_df, customer_anomaly, transaction_fraud, selected_segments, available_segments)
 
@@ -666,6 +668,369 @@ def show_combined_analysis_page(filtered_df, customer_anomaly, transaction_fraud
             file_name="combined_segment_anomaly_analysis.csv",
             mime="text/csv"
         )
+
+def show_prediction_page():
+    """Segment prediction page with interactive predictor"""
+    import joblib
+    import json
+    
+    st.markdown("---")
+    st.subheader("🎯 Customer Segment Predictor")
+    st.markdown("Use our trained AI model to predict which segment a new customer will belong to.")
+    
+    # Load model and metadata
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    models_dir = os.path.abspath(os.path.join(script_dir, '..', 'models'))
+    output_dir = os.path.abspath(os.path.join(script_dir, '..', 'output'))
+    
+    try:
+        model = joblib.load(os.path.join(models_dir, 'segment_classifier.pkl'))
+        scaler = joblib.load(os.path.join(models_dir, 'feature_scaler.pkl'))
+        
+        with open(os.path.join(models_dir, 'model_info.json'), 'r') as f:
+            model_info = json.load(f)
+        
+        feature_columns = model_info['feature_columns']
+        
+    except Exception as e:
+        st.error(f"❌ Could not load prediction model: {e}")
+        st.info("Please run the `predictive_modeling.py` script first to train the model.")
+        return
+    
+    # Display model performance
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Model", model_info['model_name'])
+    with col2:
+        st.metric("Test Accuracy", f"{model_info['test_accuracy']:.1%}")
+    with col3:
+        st.metric("Test F1-Score", f"{model_info['test_f1']:.1%}")
+    with col4:
+        st.metric("Features Used", len(feature_columns))
+    
+    # Feature importance visualization
+    st.markdown("---")
+    st.subheader("📊 Feature Importance")
+    
+    try:
+        feature_importance = pd.read_csv(os.path.join(output_dir, 'feature_importance.csv'))
+        top_10 = feature_importance.head(10)
+        
+        fig_importance = px.bar(
+            top_10,
+            x='importance',
+            y='feature',
+            orientation='h',
+            title='Top 10 Most Important Features for Prediction',
+            labels={'importance': 'Importance Score', 'feature': 'Feature'},
+            color='importance',
+            color_continuous_scale='Blues'
+        )
+        fig_importance.update_layout(yaxis={'categoryorder': 'total ascending'})
+        st.plotly_chart(fig_importance, use_container_width=True)
+    except:
+        st.info("Feature importance chart not available.")
+    
+    # Interactive predictor
+    st.markdown("---")
+    st.subheader("🔮 Predict Customer Segment")
+    st.markdown("Enter customer characteristics below to predict their segment:")
+    
+    # Create input method selector
+    input_method = st.radio("Input Method", ["Quick Preset", "Manual Entry", "CSV Upload"], horizontal=True)
+    
+    if input_method == "Quick Preset":
+        st.markdown("#### Choose a preset customer profile:")
+        
+        presets = {
+            "High-Value Active Customer": {
+                'order_id_nunique': 5,
+                'payment_id_count': 10,
+                'amount_sum': 10000,
+                'amount_mean': 1000,
+                'amount_median': 950,
+                'amount_std': 200,
+                'amount_order_sum': 10200,
+                'amount_order_mean': 1020,
+                'amount_order_median': 1000,
+                'payment_delay_days_mean': -50,
+                'payment_delay_days_median': -45,
+                'payment_delay_days_min': -80,
+                'payment_delay_days_max': -10,
+                'payment_delay_days_std': 20,
+                'recency_days': 30,
+                'customer_lifetime_days': 365,
+                'payment_frequency': 0.027
+            },
+            "Late Payer": {
+                'order_id_nunique': 1,
+                'payment_id_count': 1,
+                'amount_sum': 800,
+                'amount_mean': 800,
+                'amount_median': 800,
+                'amount_std': 0,
+                'amount_order_sum': 850,
+                'amount_order_mean': 850,
+                'amount_order_median': 850,
+                'payment_delay_days_mean': 300,
+                'payment_delay_days_median': 300,
+                'payment_delay_days_min': 300,
+                'payment_delay_days_max': 300,
+                'payment_delay_days_std': 0,
+                'recency_days': 250,
+                'customer_lifetime_days': 600,
+                'payment_frequency': 0.002
+            },
+            "Inactive Customer": {
+                'order_id_nunique': 1,
+                'payment_id_count': 2,
+                'amount_sum': 1500,
+                'amount_mean': 750,
+                'amount_median': 750,
+                'amount_std': 50,
+                'amount_order_sum': 1550,
+                'amount_order_mean': 775,
+                'amount_order_median': 775,
+                'payment_delay_days_mean': -200,
+                'payment_delay_days_median': -200,
+                'payment_delay_days_min': -220,
+                'payment_delay_days_max': -180,
+                'payment_delay_days_std': 20,
+                'recency_days': 500,
+                'customer_lifetime_days': 700,
+                'payment_frequency': 0.003
+            },
+            "Standard Customer": {
+                'order_id_nunique': 2,
+                'payment_id_count': 4,
+                'amount_sum': 4000,
+                'amount_mean': 1000,
+                'amount_median': 950,
+                'amount_std': 100,
+                'amount_order_sum': 4100,
+                'amount_order_mean': 1025,
+                'amount_order_median': 1000,
+                'payment_delay_days_mean': 50,
+                'payment_delay_days_median': 45,
+                'payment_delay_days_min': 10,
+                'payment_delay_days_max': 90,
+                'payment_delay_days_std': 30,
+                'recency_days': 90,
+                'customer_lifetime_days': 250,
+                'payment_frequency': 0.016
+            }
+        }
+        
+        selected_preset = st.selectbox("Select Preset", list(presets.keys()))
+        customer_features = presets[selected_preset]
+        
+        st.success(f"✅ Loaded preset: {selected_preset}")
+        
+    elif input_method == "Manual Entry":
+        st.markdown("#### Enter key customer characteristics:")
+        st.info("ℹ️ Simplified entry - only the most important features. Other features will be auto-calculated.")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("**📊 Customer Activity**")
+            order_id_nunique = st.number_input("Number of Orders", min_value=0, value=2, step=1, 
+                                               help="How many orders has this customer placed?")
+            payment_id_count = st.number_input("Number of Payments", min_value=0, value=4, step=1,
+                                              help="How many payments has this customer made?")
+            
+            st.markdown("**💰 Payment Behavior**")
+            amount_sum = st.number_input("Total Amount Paid (HUF)", min_value=0.0, value=4000.0, step=100.0,
+                                        help="Sum of all payments from this customer")
+            
+            payment_delay_days_mean = st.number_input("Average Payment Delay (days)", value=50.0, step=10.0,
+                                                     help="Positive = pays late, Negative = pays early, 0 = on time")
+        
+        with col2:
+            st.markdown("**⏰ Recency & Activity**")
+            recency_days = st.number_input("Days Since Last Payment", min_value=0, value=90, step=10,
+                                          help="How many days ago was the last payment?")
+            customer_lifetime_days = st.number_input("Customer Lifetime (days)", min_value=1, value=250, step=10,
+                                                    help="Days since customer registration")
+            
+            st.markdown("**📈 Additional Metrics**")
+            payment_delay_days_max = st.number_input("Maximum Payment Delay (days)", value=90.0, step=10.0,
+                                                    help="Worst payment delay ever observed")
+        
+        # Auto-calculate derived features
+        amount_mean = amount_sum / payment_id_count if payment_id_count > 0 else amount_sum
+        amount_median = amount_mean * 0.95  # Approximate
+        amount_std = amount_mean * 0.15  # Approximate 15% std dev
+        
+        amount_order_sum = amount_sum * 1.02  # Orders slightly higher than payments
+        amount_order_mean = amount_order_sum / order_id_nunique if order_id_nunique > 0 else amount_order_sum
+        amount_order_median = amount_order_mean * 0.98
+        
+        payment_delay_days_median = payment_delay_days_mean * 0.9
+        payment_delay_days_min = payment_delay_days_mean * 0.2
+        payment_delay_days_std = abs(payment_delay_days_max - payment_delay_days_mean) * 0.4
+        
+        payment_frequency = payment_id_count / customer_lifetime_days if customer_lifetime_days > 0 else 0.01
+        
+        customer_features = {
+            'order_id_nunique': order_id_nunique,
+            'payment_id_count': payment_id_count,
+            'amount_sum': amount_sum,
+            'amount_mean': amount_mean,
+            'amount_median': amount_median,
+            'amount_std': amount_std,
+            'amount_order_sum': amount_order_sum,
+            'amount_order_mean': amount_order_mean,
+            'amount_order_median': amount_order_median,
+            'payment_delay_days_mean': payment_delay_days_mean,
+            'payment_delay_days_median': payment_delay_days_median,
+            'payment_delay_days_min': payment_delay_days_min,
+            'payment_delay_days_max': payment_delay_days_max,
+            'payment_delay_days_std': payment_delay_days_std,
+            'recency_days': recency_days,
+            'customer_lifetime_days': customer_lifetime_days,
+            'payment_frequency': payment_frequency
+        }
+    
+    else:  # CSV Upload
+        st.markdown("#### Upload a CSV file with customer features:")
+        st.markdown("The CSV should contain columns matching the feature names.")
+        
+        uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
+        
+        if uploaded_file is not None:
+            try:
+                upload_df = pd.read_csv(uploaded_file)
+                st.success(f"✅ Loaded {len(upload_df)} customers from CSV")
+                st.dataframe(upload_df.head(), use_container_width=True)
+                
+                # Predict for all rows
+                if st.button("Predict All"):
+                    predictions_list = []
+                    
+                    for idx, row in upload_df.iterrows():
+                        customer_features = row.to_dict()
+                        
+                        # Prepare features
+                        customer_df = pd.DataFrame([customer_features])
+                        for feature in feature_columns:
+                            if feature not in customer_df.columns:
+                                customer_df[feature] = 0
+                        
+                        X = customer_df[feature_columns].copy()
+                        X = X.replace([np.inf, -np.inf], np.nan).fillna(0)
+                        X_scaled = scaler.transform(X)
+                        
+                        # Predict
+                        predicted_segment = model.predict(X_scaled)[0]
+                        
+                        if hasattr(model, 'predict_proba'):
+                            probabilities = model.predict_proba(X_scaled)[0]
+                            confidence = probabilities.max()
+                        else:
+                            confidence = 1.0
+                        
+                        predictions_list.append({
+                            'row': idx,
+                            'predicted_segment': int(predicted_segment),
+                            'segment_name': SEGMENT_INFO[int(predicted_segment)]['name'],
+                            'confidence': f"{confidence:.2%}"
+                        })
+                    
+                    predictions_df = pd.DataFrame(predictions_list)
+                    st.subheader("Prediction Results")
+                    st.dataframe(predictions_df, use_container_width=True)
+                    
+                    # Download predictions
+                    csv_pred = predictions_df.to_csv(index=False).encode('utf-8')
+                    st.download_button(
+                        label="📥 Download Predictions",
+                        data=csv_pred,
+                        file_name="segment_predictions.csv",
+                        mime="text/csv"
+                    )
+                
+                return
+            except Exception as e:
+                st.error(f"Error reading CSV: {e}")
+                return
+        else:
+            st.info("Please upload a CSV file to make predictions.")
+            return
+    
+    # Make prediction button
+    st.markdown("---")
+    if st.button("🔮 Predict Segment", type="primary", use_container_width=True):
+        # Prepare features
+        customer_df = pd.DataFrame([customer_features])
+        
+        # Ensure all required features are present
+        for feature in feature_columns:
+            if feature not in customer_df.columns:
+                customer_df[feature] = 0
+        
+        # Select and order features
+        X = customer_df[feature_columns].copy()
+        X = X.replace([np.inf, -np.inf], np.nan).fillna(0)
+        
+        # Scale features
+        X_scaled = scaler.transform(X)
+        
+        # Predict
+        predicted_segment = model.predict(X_scaled)[0]
+        
+        # Get probability if available
+        if hasattr(model, 'predict_proba'):
+            probabilities = model.predict_proba(X_scaled)[0]
+            confidence = probabilities.max()
+        else:
+            confidence = 1.0
+            probabilities = None
+        
+        # Display results
+        st.markdown("---")
+        st.markdown("### 🎉 Prediction Results")
+        
+        segment_info = SEGMENT_INFO[predicted_segment]
+        
+        # Main result card
+        st.markdown(f"""
+        <div style='padding: 30px; border-radius: 10px; background-color: {segment_info['color']}20; border: 2px solid {segment_info['color']}'>
+            <h2 style='color: {segment_info['color']}; margin: 0;'>Segment {predicted_segment}: {segment_info['name']}</h2>
+            <p style='font-size: 1.2em; margin: 10px 0;'><strong>Confidence:</strong> {confidence:.1%}</p>
+            <p style='margin: 10px 0;'><strong>Description:</strong> {segment_info['description']}</p>
+            <p style='margin: 10px 0;'><strong>Recommendation:</strong> {segment_info['recommendation']}</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Probability distribution
+        if probabilities is not None:
+            st.markdown("#### Probability Distribution Across All Segments")
+            
+            prob_df = pd.DataFrame({
+                'Segment': [f"Segment {i}: {SEGMENT_INFO[i]['name']}" for i in range(len(probabilities))],
+                'Probability': probabilities
+            })
+            
+            fig_prob = px.bar(
+                prob_df,
+                x='Segment',
+                y='Probability',
+                title='Prediction Confidence Across Segments',
+                labels={'Probability': 'Probability'},
+                color='Probability',
+                color_continuous_scale='Blues'
+            )
+            fig_prob.update_layout(showlegend=False)
+            st.plotly_chart(fig_prob, use_container_width=True)
+        
+        # Feature values used
+        with st.expander("📋 View Input Features Used for Prediction"):
+            feature_df = pd.DataFrame({
+                'Feature': feature_columns,
+                'Value': [customer_features.get(f, 0) for f in feature_columns]
+            })
+            st.dataframe(feature_df, use_container_width=True)
 
 if __name__ == "__main__":
     main()
