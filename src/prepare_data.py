@@ -100,9 +100,9 @@ customer_payment_summary['num_payments'] = customer_payment_summary['customer_id
 ).fillna(0).astype(int)
 customer_payment_summary.to_csv(os.path.join(data_dir, 'customer_summary.csv'), index=False)
 
-print(f'\n✓ Data loaded, preprocessed, and merged successfully!')
-print(f'✓ Merged file saved to {data_dir}/merged_payments_orders.csv')
-print(f'✓ All customers saved to {data_dir}/all_customers.csv')
-print(f'✓ Customer summary saved to {data_dir}/customer_summary.csv')
+print(f'\nData loaded, preprocessed, and merged successfully!')
+print(f'Merged file saved to {data_dir}/merged_payments_orders.csv')
+print(f'All customers saved to {data_dir}/all_customers.csv')
+print(f'Customer summary saved to {data_dir}/customer_summary.csv')
 print(f'\nCustomers with payment data: {customer_payment_summary["has_payment_data"].sum()}/{len(customer_payment_summary)}')
 print(f'\nReady for feature engineering!')
