@@ -205,3 +205,4 @@ SELECT
 FROM table_totals t
 LEFT JOIN issue_counts i ON t.table_name = i.source_table
 ORDER BY quality_score_pct DESC;
+

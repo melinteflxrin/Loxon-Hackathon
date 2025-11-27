@@ -346,11 +346,11 @@ BEGIN
              THEN 1 ELSE 0 END as pay_date_before_order,
         
         -- Flag: Missing payment_method
-        CASE WHEN p.payment_method IS NULL OR TRIM(p.payment_method) IS NULL THEN 1 ELSE 0 END as pay_missing_method,
+        CASE WHEN p.method IS NULL OR TRIM(p.method) IS NULL THEN 1 ELSE 0 END as pay_missing_method,
         
         -- Flag: Invalid payment method
-        CASE WHEN p.payment_method IS NOT NULL 
-             AND UPPER(p.payment_method) NOT IN ('CARD', 'CREDIT CARD', 'DEBIT CARD', 'PAYPAL', 'BANK TRANSFER', 'WIRE', 'CASH', 'CHECK')
+        CASE WHEN p.method IS NOT NULL 
+             AND UPPER(p.method) NOT IN ('CARD', 'CREDIT CARD', 'DEBIT CARD', 'PAYPAL', 'BANK TRANSFER', 'WIRE', 'CASH', 'CHECK')
              THEN 1 ELSE 0 END as pay_invalid_method,
         
         -- Calculate total issues
@@ -362,7 +362,7 @@ BEGIN
          CASE WHEN p.amount IS NOT NULL AND p.order_id IS NOT NULL AND EXISTS (SELECT 1 FROM st_orders o WHERE o.order_id = p.order_id AND TO_NUMBER(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) > TO_NUMBER(REGEXP_REPLACE(o.amount, '[^0-9.-]', ''))) THEN 1 ELSE 0 END +
          CASE WHEN p.payment_date IS NULL OR TRIM(p.payment_date) IS NULL THEN 1 ELSE 0 END +
          CASE WHEN p.payment_date IS NOT NULL AND p.order_id IS NOT NULL AND EXISTS (SELECT 1 FROM st_orders o WHERE o.order_id = p.order_id AND TO_DATE(SUBSTR(p.payment_date, 1, 10), 'YYYY-MM-DD') < TO_DATE(SUBSTR(o.order_date, 1, 10), 'YYYY-MM-DD')) THEN 1 ELSE 0 END +
-         CASE WHEN p.payment_method IS NULL OR TRIM(p.payment_method) IS NULL THEN 1 ELSE 0 END) as total_issues,
+         CASE WHEN p.method IS NULL OR TRIM(p.method) IS NULL THEN 1 ELSE 0 END) as total_issues,
         
         -- Severity
         CASE 
@@ -374,7 +374,7 @@ BEGIN
                   CASE WHEN p.amount IS NOT NULL AND p.order_id IS NOT NULL AND EXISTS (SELECT 1 FROM st_orders o WHERE o.order_id = p.order_id AND TO_NUMBER(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) > TO_NUMBER(REGEXP_REPLACE(o.amount, '[^0-9.-]', ''))) THEN 1 ELSE 0 END +
                   CASE WHEN p.payment_date IS NULL OR TRIM(p.payment_date) IS NULL THEN 1 ELSE 0 END +
                   CASE WHEN p.payment_date IS NOT NULL AND p.order_id IS NOT NULL AND EXISTS (SELECT 1 FROM st_orders o WHERE o.order_id = p.order_id AND TO_DATE(SUBSTR(p.payment_date, 1, 10), 'YYYY-MM-DD') < TO_DATE(SUBSTR(o.order_date, 1, 10), 'YYYY-MM-DD')) THEN 1 ELSE 0 END +
-                  CASE WHEN p.payment_method IS NULL OR TRIM(p.payment_method) IS NULL THEN 1 ELSE 0 END) >= 4 THEN 'CRITICAL'
+                  CASE WHEN p.method IS NULL OR TRIM(p.method) IS NULL THEN 1 ELSE 0 END) >= 4 THEN 'CRITICAL'
             WHEN (CASE WHEN p.payment_id IS NULL OR TRIM(p.payment_id) IS NULL THEN 1 ELSE 0 END +
                   CASE WHEN p.order_id IS NULL OR TRIM(p.order_id) IS NULL THEN 1 ELSE 0 END +
                   CASE WHEN p.order_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM st_orders o WHERE o.order_id = p.order_id) THEN 1 ELSE 0 END +
@@ -383,12 +383,12 @@ BEGIN
                   CASE WHEN p.amount IS NOT NULL AND p.order_id IS NOT NULL AND EXISTS (SELECT 1 FROM st_orders o WHERE o.order_id = p.order_id AND TO_NUMBER(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) > TO_NUMBER(REGEXP_REPLACE(o.amount, '[^0-9.-]', ''))) THEN 1 ELSE 0 END +
                   CASE WHEN p.payment_date IS NULL OR TRIM(p.payment_date) IS NULL THEN 1 ELSE 0 END +
                   CASE WHEN p.payment_date IS NOT NULL AND p.order_id IS NOT NULL AND EXISTS (SELECT 1 FROM st_orders o WHERE o.order_id = p.order_id AND TO_DATE(SUBSTR(p.payment_date, 1, 10), 'YYYY-MM-DD') < TO_DATE(SUBSTR(o.order_date, 1, 10), 'YYYY-MM-DD')) THEN 1 ELSE 0 END +
-                  CASE WHEN p.payment_method IS NULL OR TRIM(p.payment_method) IS NULL THEN 1 ELSE 0 END) >= 2 THEN 'HIGH'
+                  CASE WHEN p.method IS NULL OR TRIM(p.method) IS NULL THEN 1 ELSE 0 END) >= 2 THEN 'HIGH'
             ELSE 'MEDIUM'
         END as severity,
         
         'Payment record has data quality issues' as issue_description,
-        SUBSTR('PaymentID:' || p.payment_id || ' | OrderID:' || p.order_id || ' | Amount:' || p.amount || ' | Method:' || p.payment_method, 1, 500) as raw_data_sample
+        SUBSTR('PaymentID:' || p.payment_id || ' | OrderID:' || p.order_id || ' | Amount:' || p.amount || ' | Method:' || p.method, 1, 500) as raw_data_sample
     FROM st_payments p
     WHERE 
         -- Only log records with at least one issue
@@ -400,7 +400,7 @@ BEGIN
         (p.amount IS NOT NULL AND p.order_id IS NOT NULL AND EXISTS (SELECT 1 FROM st_orders o WHERE o.order_id = p.order_id AND TO_NUMBER(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) > TO_NUMBER(REGEXP_REPLACE(o.amount, '[^0-9.-]', '')))) OR
         (p.payment_date IS NULL OR TRIM(p.payment_date) IS NULL) OR
         (p.payment_date IS NOT NULL AND p.order_id IS NOT NULL AND EXISTS (SELECT 1 FROM st_orders o WHERE o.order_id = p.order_id AND TO_DATE(SUBSTR(p.payment_date, 1, 10), 'YYYY-MM-DD') < TO_DATE(SUBSTR(o.order_date, 1, 10), 'YYYY-MM-DD'))) OR
-        (p.payment_method IS NULL OR TRIM(p.payment_method) IS NULL);
+        (p.method IS NULL OR TRIM(p.method) IS NULL);
     
     v_payment_count := SQL%ROWCOUNT;
     COMMIT;
@@ -444,12 +444,14 @@ ORDER BY source_table,
     END;
 
 -- Most common issues
-SELECT 'Customer Issues' as category, COUNT(*) as total FROM lxn_data_consistency_log WHERE cust_missing_id = 1 UNION ALL
-SELECT 'Customer Issues', COUNT(*) FROM lxn_data_consistency_log WHERE cust_invalid_email = 1 UNION ALL
-SELECT 'Order Issues', COUNT(*) FROM lxn_data_consistency_log WHERE ord_negative_not_refund = 1 UNION ALL
-SELECT 'Order Issues', COUNT(*) FROM lxn_data_consistency_log WHERE ord_invalid_customer = 1 UNION ALL
-SELECT 'Payment Issues', COUNT(*) FROM lxn_data_consistency_log WHERE pay_amount_exceeds_order = 1 UNION ALL
-SELECT 'Payment Issues', COUNT(*) FROM lxn_data_consistency_log WHERE pay_date_before_order = 1
+SELECT * FROM (
+    SELECT 'Customer Issues' as category, COUNT(*) as total FROM lxn_data_consistency_log WHERE cust_missing_id = 1 UNION ALL
+    SELECT 'Customer Issues', COUNT(*) FROM lxn_data_consistency_log WHERE cust_invalid_email = 1 UNION ALL
+    SELECT 'Order Issues', COUNT(*) FROM lxn_data_consistency_log WHERE ord_negative_not_refund = 1 UNION ALL
+    SELECT 'Order Issues', COUNT(*) FROM lxn_data_consistency_log WHERE ord_invalid_customer = 1 UNION ALL
+    SELECT 'Payment Issues', COUNT(*) FROM lxn_data_consistency_log WHERE pay_amount_exceeds_order = 1 UNION ALL
+    SELECT 'Payment Issues', COUNT(*) FROM lxn_data_consistency_log WHERE pay_date_before_order = 1
+)
 ORDER BY total DESC;
 
 -- Sample of critical issues
