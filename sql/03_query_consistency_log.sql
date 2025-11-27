@@ -56,46 +56,7 @@ ORDER BY count DESC
 FETCH FIRST 10 ROWS ONLY;
 
 -- ============================================================================
--- 4. CRITICAL BUSINESS RULE VIOLATIONS
--- ============================================================================
-SELECT 
-    'Negative amount (not refund)' as violation_type,
-    COUNT(*) as count,
-    'Order' as affected_table
-FROM lxn_data_consistency_log
-WHERE ord_negative_not_refund = 1
-UNION ALL
-SELECT 
-    'Payment exceeds order amount',
-    COUNT(*),
-    'Payment'
-FROM lxn_data_consistency_log
-WHERE pay_amount_exceeds_order = 1
-UNION ALL
-SELECT 
-    'Payment before order date',
-    COUNT(*),
-    'Payment'
-FROM lxn_data_consistency_log
-WHERE pay_date_before_order = 1
-UNION ALL
-SELECT 
-    'Order references invalid customer',
-    COUNT(*),
-    'Order'
-FROM lxn_data_consistency_log
-WHERE ord_invalid_customer = 1
-UNION ALL
-SELECT 
-    'Payment references invalid order',
-    COUNT(*),
-    'Payment'
-FROM lxn_data_consistency_log
-WHERE pay_invalid_order = 1
-ORDER BY count DESC;
-
--- ============================================================================
--- 5. SEVERITY DISTRIBUTION
+-- 4. SEVERITY DISTRIBUTION
 -- ============================================================================
 SELECT 
     severity,
@@ -156,7 +117,6 @@ SELECT
     ord_negative_not_refund,
     ord_missing_amount,
     ord_invalid_currency,
-    ord_future_order_date,
     total_issues,
     severity
 FROM lxn_data_consistency_log
