@@ -408,15 +408,26 @@ def show_fraud_detection_page(customer_anomaly, transaction_fraud, df):
     with col1:
         # Anomaly consensus distribution
         consensus_counts = customer_anomaly['anomaly_consensus'].value_counts().sort_index()
-        fig_consensus = px.bar(
-            x=consensus_counts.index,
-            y=consensus_counts.values,
-            labels={'x': 'Number of Methods Flagging as Anomaly', 'y': 'Number of Customers'},
+        
+        # Create color mapping: green for 0, yellow for 1, orange for 2, red for 3
+        colors = ['#27ae60', '#f39c12', '#e67e22', '#e74c3c']
+        bar_colors = [colors[int(idx)] if idx < len(colors) else '#e74c3c' for idx in consensus_counts.index]
+        
+        fig_consensus = go.Figure(data=[
+            go.Bar(
+                x=consensus_counts.index,
+                y=consensus_counts.values,
+                marker=dict(color=bar_colors),
+                text=consensus_counts.values,
+                textposition='outside'
+            )
+        ])
+        fig_consensus.update_layout(
             title='Anomaly Detection Consensus',
-            color=consensus_counts.values,
-            color_continuous_scale='Reds'
+            xaxis_title='Number of Methods Flagging as Anomaly',
+            yaxis_title='Number of Customers',
+            showlegend=False
         )
-        fig_consensus.update_layout(showlegend=False)
         st.plotly_chart(fig_consensus, use_container_width=True)
     
     with col2:
@@ -438,7 +449,8 @@ def show_fraud_detection_page(customer_anomaly, transaction_fraud, df):
     
     # Top anomalous customers
     if len(anomalous_customers) > 0:
-        st.markdown("#### 🔴 Top 10 Most Anomalous Customers")
+        st.markdown("#### 🔴 Top 10 Most Anomalous Customers (by Isolation Forest Score)")
+        st.info("ℹ️ 'is_anomaly' = True only if flagged by 2+ detection methods (consensus approach to reduce false positives)")
         top_anomalies = customer_anomaly.nsmallest(10, 'anomaly_score_iso_forest')[
             ['customer_id', 'amount_sum', 'payment_delay_days_mean', 'payment_id_count', 
              'anomaly_score_iso_forest', 'anomaly_consensus', 'is_anomaly']
@@ -749,7 +761,7 @@ def show_prediction_page():
     st.markdown("Enter customer characteristics below to predict their segment:")
     
     # Create input method selector
-    input_method = st.radio("Input Method", ["Quick Preset", "Manual Entry", "CSV Upload"], horizontal=True)
+    input_method = st.radio("Input Method", ["Quick Preset", "Manual Entry"], horizontal=True)
     
     if input_method == "Quick Preset":
         st.markdown("#### Choose a preset customer profile:")
@@ -903,72 +915,6 @@ def show_prediction_page():
             'customer_lifetime_days': customer_lifetime_days,
             'payment_frequency': payment_frequency
         }
-    
-    else:  # CSV Upload
-        st.markdown("#### Upload a CSV file with customer features:")
-        st.markdown("The CSV should contain columns matching the feature names.")
-        
-        uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
-        
-        if uploaded_file is not None:
-            try:
-                upload_df = pd.read_csv(uploaded_file)
-                st.success(f"✅ Loaded {len(upload_df)} customers from CSV")
-                st.dataframe(upload_df.head(), use_container_width=True)
-                
-                # Predict for all rows
-                if st.button("Predict All"):
-                    predictions_list = []
-                    
-                    for idx, row in upload_df.iterrows():
-                        customer_features = row.to_dict()
-                        
-                        # Prepare features
-                        customer_df = pd.DataFrame([customer_features])
-                        for feature in feature_columns:
-                            if feature not in customer_df.columns:
-                                customer_df[feature] = 0
-                        
-                        X = customer_df[feature_columns].copy()
-                        X = X.replace([np.inf, -np.inf], np.nan).fillna(0)
-                        X_scaled = scaler.transform(X)
-                        
-                        # Predict
-                        predicted_segment = model.predict(X_scaled)[0]
-                        
-                        if hasattr(model, 'predict_proba'):
-                            probabilities = model.predict_proba(X_scaled)[0]
-                            confidence = probabilities.max()
-                        else:
-                            confidence = 1.0
-                        
-                        predictions_list.append({
-                            'row': idx,
-                            'predicted_segment': int(predicted_segment),
-                            'segment_name': SEGMENT_INFO[int(predicted_segment)]['name'],
-                            'confidence': f"{confidence:.2%}"
-                        })
-                    
-                    predictions_df = pd.DataFrame(predictions_list)
-                    st.subheader("Prediction Results")
-                    st.dataframe(predictions_df, use_container_width=True)
-                    
-                    # Download predictions
-                    csv_pred = predictions_df.to_csv(index=False).encode('utf-8')
-                    st.download_button(
-                        label="📥 Download Predictions",
-                        data=csv_pred,
-                        file_name="segment_predictions.csv",
-                        mime="text/csv"
-                    )
-                
-                return
-            except Exception as e:
-                st.error(f"Error reading CSV: {e}")
-                return
-        else:
-            st.info("Please upload a CSV file to make predictions.")
-            return
     
     # Make prediction button
     st.markdown("---")
