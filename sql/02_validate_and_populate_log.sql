@@ -72,15 +72,16 @@ BEGIN
         -- Flag: Missing reg_date
         CASE WHEN reg_date IS NULL OR TRIM(reg_date) IS NULL THEN 1 ELSE 0 END as cust_missing_reg_date,
         
-        -- Flag: Invalid reg_date (unparseable)
+        -- Flag: Invalid reg_date (unparseable - not matching YYYY-MM-DD format)
         CASE WHEN reg_date IS NOT NULL 
-             AND reg_date NOT IN ('', 'NULL', 'N/A', 'null')
-             AND TO_DATE(SUBSTR(reg_date, 1, 10), 'YYYY-MM-DD') IS NULL 
+             AND TRIM(reg_date) NOT IN ('', 'NULL', 'N/A', 'null')
+             AND NOT REGEXP_LIKE(SUBSTR(reg_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
              THEN 1 ELSE 0 END as cust_invalid_reg_date,
         
-        -- Flag: Future registration date
+        -- Flag: Future registration date (year > 2025)
         CASE WHEN reg_date IS NOT NULL 
-             AND TO_DATE(SUBSTR(reg_date, 1, 10), 'YYYY-MM-DD') > SYSDATE
+             AND REGEXP_LIKE(SUBSTR(reg_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+             AND TO_NUMBER(SUBSTR(reg_date, 1, 4)) > 2025
              THEN 1 ELSE 0 END as cust_future_reg_date,
         
         -- Calculate total issues for this record
@@ -91,7 +92,8 @@ BEGIN
          CASE WHEN phone IS NULL OR TRIM(phone) IS NULL THEN 1 ELSE 0 END +
          CASE WHEN phone IS NOT NULL AND LENGTH(REGEXP_REPLACE(phone, '[^0-9]', '')) < 7 THEN 1 ELSE 0 END +
          CASE WHEN reg_date IS NULL OR TRIM(reg_date) IS NULL THEN 1 ELSE 0 END +
-         CASE WHEN reg_date IS NOT NULL AND TO_DATE(SUBSTR(reg_date, 1, 10), 'YYYY-MM-DD') > SYSDATE THEN 1 ELSE 0 END) as total_issues,
+         CASE WHEN reg_date IS NOT NULL AND TRIM(reg_date) NOT IN ('', 'NULL', 'N/A', 'null') AND NOT REGEXP_LIKE(SUBSTR(reg_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') THEN 1 ELSE 0 END +
+         CASE WHEN reg_date IS NOT NULL AND REGEXP_LIKE(SUBSTR(reg_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') AND TO_NUMBER(SUBSTR(reg_date, 1, 4)) > 2025 THEN 1 ELSE 0 END) as total_issues,
         
         -- Severity
         CASE 
@@ -105,7 +107,8 @@ BEGIN
                   CASE WHEN phone IS NULL OR TRIM(phone) IS NULL THEN 1 ELSE 0 END +
                   CASE WHEN phone IS NOT NULL AND LENGTH(REGEXP_REPLACE(phone, '[^0-9]', '')) < 7 THEN 1 ELSE 0 END +
                   CASE WHEN reg_date IS NULL OR TRIM(reg_date) IS NULL THEN 1 ELSE 0 END +
-                  CASE WHEN reg_date IS NOT NULL AND TO_DATE(SUBSTR(reg_date, 1, 10), 'YYYY-MM-DD') > SYSDATE THEN 1 ELSE 0 END) >= 3 THEN 'HIGH'
+                  CASE WHEN reg_date IS NOT NULL AND TRIM(reg_date) NOT IN ('', 'NULL', 'N/A', 'null') AND NOT REGEXP_LIKE(SUBSTR(reg_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') THEN 1 ELSE 0 END +
+                  CASE WHEN reg_date IS NOT NULL AND REGEXP_LIKE(SUBSTR(reg_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') AND TO_NUMBER(SUBSTR(reg_date, 1, 4)) > 2025 THEN 1 ELSE 0 END) >= 3 THEN 'HIGH'
             WHEN (CASE WHEN customer_id IS NULL OR TRIM(customer_id) IS NULL THEN 1 ELSE 0 END +
                   CASE WHEN full_name IS NULL OR TRIM(full_name) IS NULL THEN 1 ELSE 0 END +
                   CASE WHEN email IS NULL OR TRIM(email) IS NULL THEN 1 ELSE 0 END +
@@ -113,7 +116,8 @@ BEGIN
                   CASE WHEN phone IS NULL OR TRIM(phone) IS NULL THEN 1 ELSE 0 END +
                   CASE WHEN phone IS NOT NULL AND LENGTH(REGEXP_REPLACE(phone, '[^0-9]', '')) < 7 THEN 1 ELSE 0 END +
                   CASE WHEN reg_date IS NULL OR TRIM(reg_date) IS NULL THEN 1 ELSE 0 END +
-                  CASE WHEN reg_date IS NOT NULL AND TO_DATE(SUBSTR(reg_date, 1, 10), 'YYYY-MM-DD') > SYSDATE THEN 1 ELSE 0 END) >= 1 THEN 'MEDIUM'
+                  CASE WHEN reg_date IS NOT NULL AND TRIM(reg_date) NOT IN ('', 'NULL', 'N/A', 'null') AND NOT REGEXP_LIKE(SUBSTR(reg_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') THEN 1 ELSE 0 END +
+                  CASE WHEN reg_date IS NOT NULL AND REGEXP_LIKE(SUBSTR(reg_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') AND TO_NUMBER(SUBSTR(reg_date, 1, 4)) > 2025 THEN 1 ELSE 0 END) >= 1 THEN 'MEDIUM'
             ELSE 'LOW'
         END as severity,
         
@@ -129,7 +133,8 @@ BEGIN
         (phone IS NULL OR TRIM(phone) IS NULL) OR
         (phone IS NOT NULL AND LENGTH(REGEXP_REPLACE(phone, '[^0-9]', '')) < 7) OR
         (reg_date IS NULL OR TRIM(reg_date) IS NULL) OR
-        (reg_date IS NOT NULL AND TO_DATE(SUBSTR(reg_date, 1, 10), 'YYYY-MM-DD') > SYSDATE);
+        (reg_date IS NOT NULL AND TRIM(reg_date) NOT IN ('', 'NULL', 'N/A', 'null') AND NOT REGEXP_LIKE(SUBSTR(reg_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$')) OR
+        (reg_date IS NOT NULL AND REGEXP_LIKE(SUBSTR(reg_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') AND TO_NUMBER(SUBSTR(reg_date, 1, 4)) > 2025);
     
     v_customer_count := SQL%ROWCOUNT;
     COMMIT;
@@ -199,15 +204,16 @@ BEGIN
         -- Flag: Missing order_date
         CASE WHEN o.order_date IS NULL OR TRIM(o.order_date) IS NULL THEN 1 ELSE 0 END as ord_missing_order_date,
         
-        -- Flag: Invalid order_date (unparseable)
+        -- Flag: Invalid order_date (unparseable - not matching YYYY-MM-DD format)
         CASE WHEN o.order_date IS NOT NULL 
-             AND o.order_date NOT IN ('', 'NULL', 'N/A', 'null')
-             AND TO_DATE(SUBSTR(o.order_date, 1, 10), 'YYYY-MM-DD') IS NULL
+             AND TRIM(o.order_date) NOT IN ('', 'NULL', 'N/A', 'null')
+             AND NOT REGEXP_LIKE(SUBSTR(o.order_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
              THEN 1 ELSE 0 END as ord_invalid_order_date,
         
-        -- Flag: Future order date
+        -- Flag: Future order date (year > 2025)
         CASE WHEN o.order_date IS NOT NULL 
-             AND TO_DATE(SUBSTR(o.order_date, 1, 10), 'YYYY-MM-DD') > SYSDATE
+             AND REGEXP_LIKE(SUBSTR(o.order_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+             AND TO_NUMBER(SUBSTR(o.order_date, 1, 4)) > 2025
              THEN 1 ELSE 0 END as ord_future_order_date,
         
         -- Calculate total issues
@@ -325,23 +331,26 @@ BEGIN
         -- Flag: Missing payment_date
         CASE WHEN p.payment_date IS NULL OR TRIM(p.payment_date) IS NULL THEN 1 ELSE 0 END as pay_missing_payment_date,
         
-        -- Flag: Invalid payment_date (unparseable)
+        -- Flag: Invalid payment_date (unparseable - not matching YYYY-MM-DD format)
         CASE WHEN p.payment_date IS NOT NULL 
-             AND p.payment_date NOT IN ('', 'NULL', 'N/A', 'null')
-             AND TO_DATE(SUBSTR(p.payment_date, 1, 10), 'YYYY-MM-DD') IS NULL
+             AND TRIM(p.payment_date) NOT IN ('', 'NULL', 'N/A', 'null')
+             AND NOT REGEXP_LIKE(SUBSTR(p.payment_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
              THEN 1 ELSE 0 END as pay_invalid_payment_date,
         
-        -- Flag: Future payment date
+        -- Flag: Future payment date (year > 2025)
         CASE WHEN p.payment_date IS NOT NULL 
-             AND TO_DATE(SUBSTR(p.payment_date, 1, 10), 'YYYY-MM-DD') > SYSDATE
+             AND REGEXP_LIKE(SUBSTR(p.payment_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+             AND TO_NUMBER(SUBSTR(p.payment_date, 1, 4)) > 2025
              THEN 1 ELSE 0 END as pay_future_payment_date,
         
-        -- Flag: Payment date before order date
+        -- Flag: Payment date before order date (comparing date strings directly)
         CASE WHEN p.payment_date IS NOT NULL AND p.order_id IS NOT NULL
+             AND REGEXP_LIKE(SUBSTR(p.payment_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
              AND EXISTS (
                  SELECT 1 FROM st_orders o 
-                 WHERE o.order_id = p.order_id 
-                 AND TO_DATE(SUBSTR(p.payment_date, 1, 10), 'YYYY-MM-DD') < TO_DATE(SUBSTR(o.order_date, 1, 10), 'YYYY-MM-DD')
+                 WHERE o.order_id = p.order_id
+                 AND REGEXP_LIKE(SUBSTR(o.order_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+                 AND SUBSTR(p.payment_date, 1, 10) < SUBSTR(o.order_date, 1, 10)
              )
              THEN 1 ELSE 0 END as pay_date_before_order,
         
@@ -361,7 +370,9 @@ BEGIN
          CASE WHEN p.amount IS NOT NULL AND TO_NUMBER(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) < 0 THEN 1 ELSE 0 END +
          CASE WHEN p.amount IS NOT NULL AND p.order_id IS NOT NULL AND EXISTS (SELECT 1 FROM st_orders o WHERE o.order_id = p.order_id AND TO_NUMBER(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) > TO_NUMBER(REGEXP_REPLACE(o.amount, '[^0-9.-]', ''))) THEN 1 ELSE 0 END +
          CASE WHEN p.payment_date IS NULL OR TRIM(p.payment_date) IS NULL THEN 1 ELSE 0 END +
-         CASE WHEN p.payment_date IS NOT NULL AND p.order_id IS NOT NULL AND EXISTS (SELECT 1 FROM st_orders o WHERE o.order_id = p.order_id AND TO_DATE(SUBSTR(p.payment_date, 1, 10), 'YYYY-MM-DD') < TO_DATE(SUBSTR(o.order_date, 1, 10), 'YYYY-MM-DD')) THEN 1 ELSE 0 END +
+         CASE WHEN p.payment_date IS NOT NULL AND TRIM(p.payment_date) NOT IN ('', 'NULL', 'N/A', 'null') AND NOT REGEXP_LIKE(SUBSTR(p.payment_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') THEN 1 ELSE 0 END +
+         CASE WHEN p.payment_date IS NOT NULL AND REGEXP_LIKE(SUBSTR(p.payment_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') AND TO_NUMBER(SUBSTR(p.payment_date, 1, 4)) > 2025 THEN 1 ELSE 0 END +
+         CASE WHEN p.payment_date IS NOT NULL AND p.order_id IS NOT NULL AND REGEXP_LIKE(SUBSTR(p.payment_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') AND EXISTS (SELECT 1 FROM st_orders o WHERE o.order_id = p.order_id AND REGEXP_LIKE(SUBSTR(o.order_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') AND SUBSTR(p.payment_date, 1, 10) < SUBSTR(o.order_date, 1, 10)) THEN 1 ELSE 0 END +
          CASE WHEN p.method IS NULL OR TRIM(p.method) IS NULL THEN 1 ELSE 0 END) as total_issues,
         
         -- Severity
@@ -373,7 +384,9 @@ BEGIN
                   CASE WHEN p.amount IS NOT NULL AND TO_NUMBER(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) < 0 THEN 1 ELSE 0 END +
                   CASE WHEN p.amount IS NOT NULL AND p.order_id IS NOT NULL AND EXISTS (SELECT 1 FROM st_orders o WHERE o.order_id = p.order_id AND TO_NUMBER(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) > TO_NUMBER(REGEXP_REPLACE(o.amount, '[^0-9.-]', ''))) THEN 1 ELSE 0 END +
                   CASE WHEN p.payment_date IS NULL OR TRIM(p.payment_date) IS NULL THEN 1 ELSE 0 END +
-                  CASE WHEN p.payment_date IS NOT NULL AND p.order_id IS NOT NULL AND EXISTS (SELECT 1 FROM st_orders o WHERE o.order_id = p.order_id AND TO_DATE(SUBSTR(p.payment_date, 1, 10), 'YYYY-MM-DD') < TO_DATE(SUBSTR(o.order_date, 1, 10), 'YYYY-MM-DD')) THEN 1 ELSE 0 END +
+                  CASE WHEN p.payment_date IS NOT NULL AND TRIM(p.payment_date) NOT IN ('', 'NULL', 'N/A', 'null') AND NOT REGEXP_LIKE(SUBSTR(p.payment_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') THEN 1 ELSE 0 END +
+                  CASE WHEN p.payment_date IS NOT NULL AND REGEXP_LIKE(SUBSTR(p.payment_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') AND TO_NUMBER(SUBSTR(p.payment_date, 1, 4)) > 2025 THEN 1 ELSE 0 END +
+                  CASE WHEN p.payment_date IS NOT NULL AND p.order_id IS NOT NULL AND REGEXP_LIKE(SUBSTR(p.payment_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') AND EXISTS (SELECT 1 FROM st_orders o WHERE o.order_id = p.order_id AND REGEXP_LIKE(SUBSTR(o.order_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') AND SUBSTR(p.payment_date, 1, 10) < SUBSTR(o.order_date, 1, 10)) THEN 1 ELSE 0 END +
                   CASE WHEN p.method IS NULL OR TRIM(p.method) IS NULL THEN 1 ELSE 0 END) >= 4 THEN 'CRITICAL'
             WHEN (CASE WHEN p.payment_id IS NULL OR TRIM(p.payment_id) IS NULL THEN 1 ELSE 0 END +
                   CASE WHEN p.order_id IS NULL OR TRIM(p.order_id) IS NULL THEN 1 ELSE 0 END +
@@ -382,7 +395,9 @@ BEGIN
                   CASE WHEN p.amount IS NOT NULL AND TO_NUMBER(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) < 0 THEN 1 ELSE 0 END +
                   CASE WHEN p.amount IS NOT NULL AND p.order_id IS NOT NULL AND EXISTS (SELECT 1 FROM st_orders o WHERE o.order_id = p.order_id AND TO_NUMBER(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) > TO_NUMBER(REGEXP_REPLACE(o.amount, '[^0-9.-]', ''))) THEN 1 ELSE 0 END +
                   CASE WHEN p.payment_date IS NULL OR TRIM(p.payment_date) IS NULL THEN 1 ELSE 0 END +
-                  CASE WHEN p.payment_date IS NOT NULL AND p.order_id IS NOT NULL AND EXISTS (SELECT 1 FROM st_orders o WHERE o.order_id = p.order_id AND TO_DATE(SUBSTR(p.payment_date, 1, 10), 'YYYY-MM-DD') < TO_DATE(SUBSTR(o.order_date, 1, 10), 'YYYY-MM-DD')) THEN 1 ELSE 0 END +
+                  CASE WHEN p.payment_date IS NOT NULL AND TRIM(p.payment_date) NOT IN ('', 'NULL', 'N/A', 'null') AND NOT REGEXP_LIKE(SUBSTR(p.payment_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') THEN 1 ELSE 0 END +
+                  CASE WHEN p.payment_date IS NOT NULL AND REGEXP_LIKE(SUBSTR(p.payment_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') AND TO_NUMBER(SUBSTR(p.payment_date, 1, 4)) > 2025 THEN 1 ELSE 0 END +
+                  CASE WHEN p.payment_date IS NOT NULL AND p.order_id IS NOT NULL AND REGEXP_LIKE(SUBSTR(p.payment_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') AND EXISTS (SELECT 1 FROM st_orders o WHERE o.order_id = p.order_id AND REGEXP_LIKE(SUBSTR(o.order_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') AND SUBSTR(p.payment_date, 1, 10) < SUBSTR(o.order_date, 1, 10)) THEN 1 ELSE 0 END +
                   CASE WHEN p.method IS NULL OR TRIM(p.method) IS NULL THEN 1 ELSE 0 END) >= 2 THEN 'HIGH'
             ELSE 'MEDIUM'
         END as severity,
@@ -399,7 +414,9 @@ BEGIN
         (p.amount IS NOT NULL AND TO_NUMBER(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) < 0) OR
         (p.amount IS NOT NULL AND p.order_id IS NOT NULL AND EXISTS (SELECT 1 FROM st_orders o WHERE o.order_id = p.order_id AND TO_NUMBER(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) > TO_NUMBER(REGEXP_REPLACE(o.amount, '[^0-9.-]', '')))) OR
         (p.payment_date IS NULL OR TRIM(p.payment_date) IS NULL) OR
-        (p.payment_date IS NOT NULL AND p.order_id IS NOT NULL AND EXISTS (SELECT 1 FROM st_orders o WHERE o.order_id = p.order_id AND TO_DATE(SUBSTR(p.payment_date, 1, 10), 'YYYY-MM-DD') < TO_DATE(SUBSTR(o.order_date, 1, 10), 'YYYY-MM-DD'))) OR
+        (p.payment_date IS NOT NULL AND TRIM(p.payment_date) NOT IN ('', 'NULL', 'N/A', 'null') AND NOT REGEXP_LIKE(SUBSTR(p.payment_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$')) OR
+        (p.payment_date IS NOT NULL AND REGEXP_LIKE(SUBSTR(p.payment_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') AND TO_NUMBER(SUBSTR(p.payment_date, 1, 4)) > 2025) OR
+        (p.payment_date IS NOT NULL AND p.order_id IS NOT NULL AND REGEXP_LIKE(SUBSTR(p.payment_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') AND EXISTS (SELECT 1 FROM st_orders o WHERE o.order_id = p.order_id AND REGEXP_LIKE(SUBSTR(o.order_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') AND SUBSTR(p.payment_date, 1, 10) < SUBSTR(o.order_date, 1, 10))) OR
         (p.method IS NULL OR TRIM(p.method) IS NULL);
     
     v_payment_count := SQL%ROWCOUNT;
