@@ -107,7 +107,7 @@ SEGMENT_INFO = {
 
 # Main app
 def main():
-    st.markdown('<div class="main-header">🎯 Customer Payment Behaviour Analysis Dashboard</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-header">Customer Payment Behaviour Analysis Dashboard</div>', unsafe_allow_html=True)
     st.markdown("### AI-Powered Customer Insights with Segmentation & Fraud Detection")
     
     # Load data
@@ -120,12 +120,12 @@ def main():
         return
     
     # Sidebar
-    st.sidebar.header("🔧 Dashboard Controls")
+    st.sidebar.header("Dashboard Controls")
     
     # Add page selection
     page = st.sidebar.radio(
         "Select View",
-        ["📊 Customer Segmentation", "🚨 Anomaly & Fraud Detection", "📈 Combined Analysis", "🎯 Segment Predictor"]
+        ["Customer Segmentation", "Anomaly & Fraud Detection", "Combined Analysis", "Segment Predictor"]
     )
     
     st.sidebar.markdown("---")
@@ -148,11 +148,11 @@ def main():
     filtered_df = df[df['segment'].isin(selected_segments)]
     
     # Route to different pages
-    if page == "📊 Customer Segmentation":
+    if page == "Customer Segmentation":
         show_segmentation_page(filtered_df, selected_segments, available_segments, customer_summary)
-    elif page == "🚨 Anomaly & Fraud Detection":
+    elif page == "Anomaly & Fraud Detection":
         show_fraud_detection_page(customer_anomaly, transaction_fraud, df)
-    elif page == "🎯 Segment Predictor":
+    elif page == "Segment Predictor":
         show_prediction_page()
     else:
         show_combined_analysis_page(filtered_df, customer_anomaly, transaction_fraud, selected_segments, available_segments)
@@ -179,7 +179,7 @@ def show_segmentation_page(filtered_df, selected_segments, available_segments, c
     
     # Segment distribution
     st.markdown("---")
-    st.subheader("🎨 Segment Distribution")
+    st.subheader("Segment Distribution")
     
     col1, col2 = st.columns(2)
     
@@ -379,7 +379,7 @@ def show_fraud_detection_page(customer_anomaly, transaction_fraud, df):
         return
     
     st.markdown("---")
-    st.subheader("🚨 Anomaly & Fraud Detection Overview")
+    st.subheader("Anomaly & Fraud Detection Overview")
     
     # Key metrics
     col1, col2, col3, col4 = st.columns(4)
@@ -745,7 +745,7 @@ def show_prediction_page():
     
     # Interactive predictor
     st.markdown("---")
-    st.subheader("🔮 Predict Customer Segment")
+    st.subheader("Predict Customer Segment")
     st.markdown("Enter customer characteristics below to predict their segment:")
     
     # Create input method selector
@@ -972,7 +972,7 @@ def show_prediction_page():
     
     # Make prediction button
     st.markdown("---")
-    if st.button("🔮 Predict Segment", type="primary", use_container_width=True):
+    if st.button("Predict Segment", type="primary", use_container_width=True):
         # Prepare features
         customer_df = pd.DataFrame([customer_features])
         

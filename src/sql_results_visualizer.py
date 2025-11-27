@@ -68,7 +68,7 @@ def visualize_segment_summary():
     )
     
     fig.update_layout(
-        title_text="Payment Behavior Segmentation Analysis",
+        title_text="Payment Behavior Segmentation Analysis - Based on Payment Timing",
         height=800,
         showlegend=True,
         margin=dict(b=300)
@@ -107,9 +107,13 @@ def visualize_quartile_analysis():
     """Creates stacked visualization of quartile performance"""
     df = pd.read_csv(DATA_DIR / 'query3_quartile_analysis.csv')
     
+    # Fill NaN values with 0 for visualization
+    df['Total Revenue (HUF)'] = df['Total Revenue (HUF)'].fillna(0)
+    df['Avg Payment Delay (Days)'] = df['Avg Payment Delay (Days)'].fillna(0)
+    
     fig = make_subplots(
         rows=2, cols=1,
-        subplot_titles=('Revenue Distribution by Quartile', 'Payment Delay by Quartile'),
+        subplot_titles=('Revenue Distribution by Quartile (Only Q4 Has Payments)', 'Payment Delay by Quartile'),
         vertical_spacing=0.15
     )
     
@@ -119,8 +123,8 @@ def visualize_quartile_analysis():
             x=df['Quartile Description'],
             y=df['Total Revenue (HUF)'],
             name='Total Revenue',
-            marker=dict(color=['#96CEB4', '#FFEAA7', '#FF6B6B', '#4ECDC4']),
-            text=df['Total Revenue (HUF)'].apply(lambda x: f'{x:,.0f}' if pd.notna(x) else '0'),
+            marker=dict(color=['#CCCCCC', '#CCCCCC', '#CCCCCC', '#4ECDC4']),
+            text=df.apply(lambda row: f'{row["Total Revenue (HUF)"]:,.0f}' if row['Total Revenue (HUF)'] > 0 else 'No Payments', axis=1),
             textposition='outside'
         ),
         row=1, col=1
@@ -135,7 +139,7 @@ def visualize_quartile_analysis():
             name='Avg Delay',
             marker=dict(size=12, color='#E74C3C'),
             line=dict(width=3),
-            text=df['Avg Payment Delay (Days)'].apply(lambda x: f'{x:.1f}d' if pd.notna(x) else 'N/A'),
+            text=df['Avg Payment Delay (Days)'].apply(lambda x: f'{x:.1f}d' if x > 0 else 'No Data'),
             textposition='top center'
         ),
         row=2, col=1
@@ -155,13 +159,13 @@ def visualize_quartile_analysis():
     # Add text annotation below the chart
     fig.add_annotation(
         text="<b>What This Shows:</b><br>" +
-             "• Customers split into 4 groups by how much they spend (Q1=lowest to Q4=highest)<br>" +
-             "• Top chart: Total money from each group<br>" +
-             "• Bottom chart: How late each group pays<br><br>" +
+             "• Customers split into 4 groups by revenue potential (Q1=lowest to Q4=highest)<br>" +
+             "• Only Q4 (top 25%) has payment data - the other 75% never paid!<br><br>" +
              "<b>Key Points:</b><br>" +
-             "• Big spenders (Q3, Q4) take longer to pay<br>" +
-             "• They might be using our money while they wait to pay<br>" +
-             "• Can't treat high-value customers the same as low-value ones",
+             "• CRITICAL FINDING: Only your biggest customers are paying<br>" +
+             "• 209 customers in Q1-Q3 have orders but zero payments recorded<br>" +
+             "• Q4 customers take 172 days on average to pay but at least they pay<br>" +
+             "• Major collection problem for lower-value customers",
         xref="paper", yref="paper",
         x=0.5, y=-0.22,
         showarrow=False,
@@ -186,6 +190,11 @@ def visualize_customer_comparison():
     """Shows top 10 best vs top 10 risky customers"""
     top = pd.read_csv(DATA_DIR / 'query4_top_customers.csv')
     risky = pd.read_csv(DATA_DIR / 'query5_risky_customers.csv')
+    
+    # Filter out customers with no revenue data, then take top 10
+    top = top[top['Total Revenue (HUF)'].notna() & (top['Total Revenue (HUF)'] > 0)]
+    top = top.head(10)
+    risky = risky.head(10)
     
     fig = make_subplots(
         rows=1, cols=2,
