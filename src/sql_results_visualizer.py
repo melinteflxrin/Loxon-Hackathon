@@ -341,15 +341,15 @@ def visualize_executive_summary():
     fig = make_subplots(
         rows=3, cols=3,
         subplot_titles=(
-            f"Total Customers<br><b>{metrics['Total Customers']}</b>",
-            f"Payment Rate<br><b>{metrics['Payment Rate']:.1f}%</b>",
-            f"Collection Rate<br><b>{metrics['Collection Rate']:.1f}%</b>",
-            f"Total Revenue<br><b>{metrics['Total Revenue']:,.0f} HUF</b>",
-            f"Total Collected<br><b>{metrics['Total Collected']:,.0f} HUF</b>",
-            f"Avg Delay<br><b>{metrics['Avg Delay']:.1f} days</b>",
-            f"Total Orders<br><b>{metrics['Total Orders']}</b>",
-            f"Total Payments<br><b>{metrics['Total Payments']}</b>",
-            f"Late Rate<br><b>{metrics['Late Payment Rate']:.1f}%</b>"
+            f"<b style='font-size:16px'>Total Customers<br>{metrics['Total Customers']}</b><br><span style='font-size:11px'>(with orders)</span>",
+            f"<b style='font-size:16px'>Payment Rate<br>{metrics['Payment Rate']:.1f}%</b><br><span style='font-size:11px'>(orders that got paid)</span>",
+            f"<b style='font-size:16px'>Collection Rate<br>{metrics['Collection Rate']:.1f}%</b><br><span style='font-size:11px'>(money received vs invoiced)</span>",
+            f"<b style='font-size:16px'>Total Revenue<br>{metrics['Total Revenue']:,.0f} HUF</b><br><span style='font-size:11px'>(total invoiced)</span>",
+            f"<b style='font-size:16px'>Total Collected<br>{metrics['Total Collected']:,.0f} HUF</b><br><span style='font-size:11px'>(actual cash received)</span>",
+            f"<b style='font-size:16px'>Avg Delay<br>{metrics['Avg Delay']:.1f} days</b><br><span style='font-size:11px'>(days past due date)</span>",
+            f"<b style='font-size:16px'>Total Orders<br>{metrics['Total Orders']}</b><br><span style='font-size:11px'>(invoices sent)</span>",
+            f"<b style='font-size:16px'>Total Payments<br>{metrics['Total Payments']}</b><br><span style='font-size:11px'>(payments received)</span>",
+            f"<b style='font-size:16px'>Late Rate<br>{metrics['Late Payment Rate']:.1f}%</b><br><span style='font-size:11px'>(% paid after due date)</span>"
         ),
         specs=[[{"type": "indicator"}, {"type": "indicator"}, {"type": "indicator"}],
                [{"type": "indicator"}, {"type": "indicator"}, {"type": "indicator"}],
@@ -375,8 +375,11 @@ def visualize_executive_summary():
         title_text="Executive Summary - Payment Performance KPIs",
         height=950,
         font=dict(size=14),
-        margin=dict(b=340)
+        margin=dict(b=340, t=120)
     )
+    
+    # Add vertical spacing between title and KPIs
+    fig.update_annotations(font_size=12, yshift=-20)
     
     # Add text annotation below the chart
     fig.add_annotation(
