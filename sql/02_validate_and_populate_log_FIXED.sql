@@ -185,11 +185,14 @@ BEGIN
         
         -- Flag: Invalid amount (non-numeric)
         CASE WHEN o.amount IS NOT NULL 
-             AND REGEXP_REPLACE(o.amount, '[^0-9.-]', '') IS NULL
+             AND (REGEXP_REPLACE(o.amount, '[^0-9.-]', '') IS NULL 
+                  OR LENGTH(REGEXP_REPLACE(o.amount, '[^0-9.-]', '')) = 0
+                  OR NOT REGEXP_LIKE(TRIM(o.amount), '^-?[0-9]+\.?[0-9]*$'))
              THEN 1 ELSE 0 END as ord_invalid_amount,
         
         -- Flag: Negative amount but currency not "REFUND"
         CASE WHEN o.amount IS NOT NULL 
+             AND REGEXP_LIKE(TRIM(o.amount), '^-?[0-9]+\.?[0-9]*$')
              AND TO_NUMBER(REGEXP_REPLACE(o.amount, '[^0-9.-]', '')) < 0
              AND UPPER(NVL(o.currency, '')) != 'REFUND'
              THEN 1 ELSE 0 END as ord_negative_not_refund,
@@ -217,12 +220,13 @@ BEGIN
              AND TO_NUMBER(SUBSTR(o.order_date, 1, 4)) > 2025
              THEN 1 ELSE 0 END as ord_future_order_date,
         
-        -- Calculate total issues
+        -- Calculate total issues (adding missing ord_invalid_amount flag)
         (CASE WHEN o.order_id IS NULL OR TRIM(o.order_id) IS NULL THEN 1 ELSE 0 END +
          CASE WHEN o.customer_id IS NULL OR TRIM(o.customer_id) IS NULL THEN 1 ELSE 0 END +
          CASE WHEN o.customer_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM st_customers c WHERE c.customer_id = o.customer_id) THEN 1 ELSE 0 END +
          CASE WHEN o.amount IS NULL OR TRIM(o.amount) IS NULL THEN 1 ELSE 0 END +
-         CASE WHEN o.amount IS NOT NULL AND TO_NUMBER(REGEXP_REPLACE(o.amount, '[^0-9.-]', '')) < 0 AND UPPER(NVL(o.currency, '')) != 'REFUND' THEN 1 ELSE 0 END +
+         CASE WHEN o.amount IS NOT NULL AND (REGEXP_REPLACE(o.amount, '[^0-9.-]', '') IS NULL OR LENGTH(REGEXP_REPLACE(o.amount, '[^0-9.-]', '')) = 0 OR NOT REGEXP_LIKE(TRIM(o.amount), '^-?[0-9]+\.?[0-9]*$')) THEN 1 ELSE 0 END +
+         CASE WHEN o.amount IS NOT NULL AND REGEXP_LIKE(TRIM(o.amount), '^-?[0-9]+\.?[0-9]*$') AND TO_NUMBER(REGEXP_REPLACE(o.amount, '[^0-9.-]', '')) < 0 AND UPPER(NVL(o.currency, '')) != 'REFUND' THEN 1 ELSE 0 END +
          CASE WHEN o.currency IS NULL OR TRIM(o.currency) IS NULL THEN 1 ELSE 0 END +
          CASE WHEN o.currency IS NOT NULL AND UPPER(o.currency) NOT IN ('USD', 'EUR', 'GBP', 'HUF', 'RON', 'REFUND', 'US$', 'EURO', '$', '€') THEN 1 ELSE 0 END +
          CASE WHEN o.order_date IS NULL OR TRIM(o.order_date) IS NULL THEN 1 ELSE 0 END +
@@ -235,7 +239,8 @@ BEGIN
                   CASE WHEN o.customer_id IS NULL OR TRIM(o.customer_id) IS NULL THEN 1 ELSE 0 END +
                   CASE WHEN o.customer_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM st_customers c WHERE c.customer_id = o.customer_id) THEN 1 ELSE 0 END +
                   CASE WHEN o.amount IS NULL OR TRIM(o.amount) IS NULL THEN 1 ELSE 0 END +
-                  CASE WHEN o.amount IS NOT NULL AND TO_NUMBER(REGEXP_REPLACE(o.amount, '[^0-9.-]', '')) < 0 AND UPPER(NVL(o.currency, '')) != 'REFUND' THEN 1 ELSE 0 END +
+                  CASE WHEN o.amount IS NOT NULL AND (REGEXP_REPLACE(o.amount, '[^0-9.-]', '') IS NULL OR LENGTH(REGEXP_REPLACE(o.amount, '[^0-9.-]', '')) = 0 OR NOT REGEXP_LIKE(TRIM(o.amount), '^-?[0-9]+\.?[0-9]*$')) THEN 1 ELSE 0 END +
+                  CASE WHEN o.amount IS NOT NULL AND REGEXP_LIKE(TRIM(o.amount), '^-?[0-9]+\.?[0-9]*$') AND TO_NUMBER(REGEXP_REPLACE(o.amount, '[^0-9.-]', '')) < 0 AND UPPER(NVL(o.currency, '')) != 'REFUND' THEN 1 ELSE 0 END +
                   CASE WHEN o.currency IS NULL OR TRIM(o.currency) IS NULL THEN 1 ELSE 0 END +
                   CASE WHEN o.currency IS NOT NULL AND UPPER(o.currency) NOT IN ('USD', 'EUR', 'GBP', 'HUF', 'RON', 'REFUND', 'US$', 'EURO', '$', '€') THEN 1 ELSE 0 END +
                   CASE WHEN o.order_date IS NULL OR TRIM(o.order_date) IS NULL THEN 1 ELSE 0 END +
@@ -245,7 +250,8 @@ BEGIN
                   CASE WHEN o.customer_id IS NULL OR TRIM(o.customer_id) IS NULL THEN 1 ELSE 0 END +
                   CASE WHEN o.customer_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM st_customers c WHERE c.customer_id = o.customer_id) THEN 1 ELSE 0 END +
                   CASE WHEN o.amount IS NULL OR TRIM(o.amount) IS NULL THEN 1 ELSE 0 END +
-                  CASE WHEN o.amount IS NOT NULL AND TO_NUMBER(REGEXP_REPLACE(o.amount, '[^0-9.-]', '')) < 0 AND UPPER(NVL(o.currency, '')) != 'REFUND' THEN 1 ELSE 0 END +
+                  CASE WHEN o.amount IS NOT NULL AND (REGEXP_REPLACE(o.amount, '[^0-9.-]', '') IS NULL OR LENGTH(REGEXP_REPLACE(o.amount, '[^0-9.-]', '')) = 0 OR NOT REGEXP_LIKE(TRIM(o.amount), '^-?[0-9]+\.?[0-9]*$')) THEN 1 ELSE 0 END +
+                  CASE WHEN o.amount IS NOT NULL AND REGEXP_LIKE(TRIM(o.amount), '^-?[0-9]+\.?[0-9]*$') AND TO_NUMBER(REGEXP_REPLACE(o.amount, '[^0-9.-]', '')) < 0 AND UPPER(NVL(o.currency, '')) != 'REFUND' THEN 1 ELSE 0 END +
                   CASE WHEN o.currency IS NULL OR TRIM(o.currency) IS NULL THEN 1 ELSE 0 END +
                   CASE WHEN o.currency IS NOT NULL AND UPPER(o.currency) NOT IN ('USD', 'EUR', 'GBP', 'HUF', 'RON', 'REFUND', 'US$', 'EURO', '$', '€') THEN 1 ELSE 0 END +
                   CASE WHEN o.order_date IS NULL OR TRIM(o.order_date) IS NULL THEN 1 ELSE 0 END +
@@ -263,7 +269,8 @@ BEGIN
         (o.customer_id IS NULL OR TRIM(o.customer_id) IS NULL) OR
         (o.customer_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM st_customers c WHERE c.customer_id = o.customer_id)) OR
         (o.amount IS NULL OR TRIM(o.amount) IS NULL) OR
-        (o.amount IS NOT NULL AND TO_NUMBER(REGEXP_REPLACE(o.amount, '[^0-9.-]', '')) < 0 AND UPPER(NVL(o.currency, '')) != 'REFUND') OR
+        (o.amount IS NOT NULL AND (REGEXP_REPLACE(o.amount, '[^0-9.-]', '') IS NULL OR LENGTH(REGEXP_REPLACE(o.amount, '[^0-9.-]', '')) = 0 OR NOT REGEXP_LIKE(TRIM(o.amount), '^-?[0-9]+\.?[0-9]*$'))) OR
+        (o.amount IS NOT NULL AND REGEXP_LIKE(TRIM(o.amount), '^-?[0-9]+\.?[0-9]*$') AND TO_NUMBER(REGEXP_REPLACE(o.amount, '[^0-9.-]', '')) < 0 AND UPPER(NVL(o.currency, '')) != 'REFUND') OR
         (o.currency IS NULL OR TRIM(o.currency) IS NULL) OR
         (o.currency IS NOT NULL AND UPPER(o.currency) NOT IN ('USD', 'EUR', 'GBP', 'HUF', 'RON', 'REFUND', 'US$', 'EURO', '$', '€')) OR
         (o.order_date IS NULL OR TRIM(o.order_date) IS NULL) OR
@@ -320,19 +327,24 @@ BEGIN
         
         -- Flag: Invalid amount (non-numeric)
         CASE WHEN p.amount IS NOT NULL 
-             AND REGEXP_REPLACE(p.amount, '[^0-9.-]', '') IS NULL
+             AND (REGEXP_REPLACE(p.amount, '[^0-9.-]', '') IS NULL 
+                  OR LENGTH(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) = 0
+                  OR NOT REGEXP_LIKE(TRIM(p.amount), '^-?[0-9]+\.?[0-9]*$'))
              THEN 1 ELSE 0 END as pay_invalid_amount,
         
         -- Flag: Negative payment amount
         CASE WHEN p.amount IS NOT NULL 
+             AND REGEXP_LIKE(TRIM(p.amount), '^-?[0-9]+\.?[0-9]*$')
              AND TO_NUMBER(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) < 0
              THEN 1 ELSE 0 END as pay_negative_amount,
         
         -- Flag: Payment amount exceeds order amount
         CASE WHEN p.amount IS NOT NULL AND p.order_id IS NOT NULL
+             AND REGEXP_LIKE(TRIM(p.amount), '^-?[0-9]+\.?[0-9]*$')
              AND EXISTS (
                  SELECT 1 FROM st_orders o 
-                 WHERE o.order_id = p.order_id 
+                 WHERE o.order_id = p.order_id
+                 AND REGEXP_LIKE(TRIM(o.amount), '^-?[0-9]+\.?[0-9]*$')
                  AND TO_NUMBER(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) > TO_NUMBER(REGEXP_REPLACE(o.amount, '[^0-9.-]', ''))
              )
              THEN 1 ELSE 0 END as pay_amount_exceeds_order,
@@ -376,8 +388,9 @@ BEGIN
          CASE WHEN p.order_id IS NULL OR TRIM(p.order_id) IS NULL THEN 1 ELSE 0 END +
          CASE WHEN p.order_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM st_orders o WHERE o.order_id = p.order_id) THEN 1 ELSE 0 END +
          CASE WHEN p.amount IS NULL OR TRIM(p.amount) IS NULL THEN 1 ELSE 0 END +
-         CASE WHEN p.amount IS NOT NULL AND TO_NUMBER(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) < 0 THEN 1 ELSE 0 END +
-         CASE WHEN p.amount IS NOT NULL AND p.order_id IS NOT NULL AND EXISTS (SELECT 1 FROM st_orders o WHERE o.order_id = p.order_id AND TO_NUMBER(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) > TO_NUMBER(REGEXP_REPLACE(o.amount, '[^0-9.-]', ''))) THEN 1 ELSE 0 END +
+         CASE WHEN p.amount IS NOT NULL AND (REGEXP_REPLACE(p.amount, '[^0-9.-]', '') IS NULL OR LENGTH(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) = 0 OR NOT REGEXP_LIKE(TRIM(p.amount), '^-?[0-9]+\.?[0-9]*$')) THEN 1 ELSE 0 END +
+         CASE WHEN p.amount IS NOT NULL AND REGEXP_LIKE(TRIM(p.amount), '^-?[0-9]+\.?[0-9]*$') AND TO_NUMBER(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) < 0 THEN 1 ELSE 0 END +
+         CASE WHEN p.amount IS NOT NULL AND p.order_id IS NOT NULL AND REGEXP_LIKE(TRIM(p.amount), '^-?[0-9]+\.?[0-9]*$') AND EXISTS (SELECT 1 FROM st_orders o WHERE o.order_id = p.order_id AND REGEXP_LIKE(TRIM(o.amount), '^-?[0-9]+\.?[0-9]*$') AND TO_NUMBER(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) > TO_NUMBER(REGEXP_REPLACE(o.amount, '[^0-9.-]', ''))) THEN 1 ELSE 0 END +
          CASE WHEN p.payment_date IS NULL OR TRIM(p.payment_date) IS NULL THEN 1 ELSE 0 END +
          CASE WHEN p.payment_date IS NOT NULL AND TRIM(p.payment_date) NOT IN ('', 'NULL', 'N/A', 'null') AND NOT REGEXP_LIKE(SUBSTR(p.payment_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') THEN 1 ELSE 0 END +
          CASE WHEN p.payment_date IS NOT NULL AND REGEXP_LIKE(SUBSTR(p.payment_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') AND TO_NUMBER(SUBSTR(p.payment_date, 1, 4)) > 2025 THEN 1 ELSE 0 END +
@@ -390,8 +403,9 @@ BEGIN
                   CASE WHEN p.order_id IS NULL OR TRIM(p.order_id) IS NULL THEN 1 ELSE 0 END +
                   CASE WHEN p.order_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM st_orders o WHERE o.order_id = p.order_id) THEN 1 ELSE 0 END +
                   CASE WHEN p.amount IS NULL OR TRIM(p.amount) IS NULL THEN 1 ELSE 0 END +
-                  CASE WHEN p.amount IS NOT NULL AND TO_NUMBER(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) < 0 THEN 1 ELSE 0 END +
-                  CASE WHEN p.amount IS NOT NULL AND p.order_id IS NOT NULL AND EXISTS (SELECT 1 FROM st_orders o WHERE o.order_id = p.order_id AND TO_NUMBER(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) > TO_NUMBER(REGEXP_REPLACE(o.amount, '[^0-9.-]', ''))) THEN 1 ELSE 0 END +
+                  CASE WHEN p.amount IS NOT NULL AND (REGEXP_REPLACE(p.amount, '[^0-9.-]', '') IS NULL OR LENGTH(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) = 0 OR NOT REGEXP_LIKE(TRIM(p.amount), '^-?[0-9]+\.?[0-9]*$')) THEN 1 ELSE 0 END +
+                  CASE WHEN p.amount IS NOT NULL AND REGEXP_LIKE(TRIM(p.amount), '^-?[0-9]+\.?[0-9]*$') AND TO_NUMBER(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) < 0 THEN 1 ELSE 0 END +
+                  CASE WHEN p.amount IS NOT NULL AND p.order_id IS NOT NULL AND REGEXP_LIKE(TRIM(p.amount), '^-?[0-9]+\.?[0-9]*$') AND EXISTS (SELECT 1 FROM st_orders o WHERE o.order_id = p.order_id AND REGEXP_LIKE(TRIM(o.amount), '^-?[0-9]+\.?[0-9]*$') AND TO_NUMBER(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) > TO_NUMBER(REGEXP_REPLACE(o.amount, '[^0-9.-]', ''))) THEN 1 ELSE 0 END +
                   CASE WHEN p.payment_date IS NULL OR TRIM(p.payment_date) IS NULL THEN 1 ELSE 0 END +
                   CASE WHEN p.payment_date IS NOT NULL AND TRIM(p.payment_date) NOT IN ('', 'NULL', 'N/A', 'null') AND NOT REGEXP_LIKE(SUBSTR(p.payment_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') THEN 1 ELSE 0 END +
                   CASE WHEN p.payment_date IS NOT NULL AND REGEXP_LIKE(SUBSTR(p.payment_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') AND TO_NUMBER(SUBSTR(p.payment_date, 1, 4)) > 2025 THEN 1 ELSE 0 END +
@@ -401,8 +415,9 @@ BEGIN
                   CASE WHEN p.order_id IS NULL OR TRIM(p.order_id) IS NULL THEN 1 ELSE 0 END +
                   CASE WHEN p.order_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM st_orders o WHERE o.order_id = p.order_id) THEN 1 ELSE 0 END +
                   CASE WHEN p.amount IS NULL OR TRIM(p.amount) IS NULL THEN 1 ELSE 0 END +
-                  CASE WHEN p.amount IS NOT NULL AND TO_NUMBER(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) < 0 THEN 1 ELSE 0 END +
-                  CASE WHEN p.amount IS NOT NULL AND p.order_id IS NOT NULL AND EXISTS (SELECT 1 FROM st_orders o WHERE o.order_id = p.order_id AND TO_NUMBER(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) > TO_NUMBER(REGEXP_REPLACE(o.amount, '[^0-9.-]', ''))) THEN 1 ELSE 0 END +
+                  CASE WHEN p.amount IS NOT NULL AND (REGEXP_REPLACE(p.amount, '[^0-9.-]', '') IS NULL OR LENGTH(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) = 0 OR NOT REGEXP_LIKE(TRIM(p.amount), '^-?[0-9]+\.?[0-9]*$')) THEN 1 ELSE 0 END +
+                  CASE WHEN p.amount IS NOT NULL AND REGEXP_LIKE(TRIM(p.amount), '^-?[0-9]+\.?[0-9]*$') AND TO_NUMBER(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) < 0 THEN 1 ELSE 0 END +
+                  CASE WHEN p.amount IS NOT NULL AND p.order_id IS NOT NULL AND REGEXP_LIKE(TRIM(p.amount), '^-?[0-9]+\.?[0-9]*$') AND EXISTS (SELECT 1 FROM st_orders o WHERE o.order_id = p.order_id AND REGEXP_LIKE(TRIM(o.amount), '^-?[0-9]+\.?[0-9]*$') AND TO_NUMBER(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) > TO_NUMBER(REGEXP_REPLACE(o.amount, '[^0-9.-]', ''))) THEN 1 ELSE 0 END +
                   CASE WHEN p.payment_date IS NULL OR TRIM(p.payment_date) IS NULL THEN 1 ELSE 0 END +
                   CASE WHEN p.payment_date IS NOT NULL AND TRIM(p.payment_date) NOT IN ('', 'NULL', 'N/A', 'null') AND NOT REGEXP_LIKE(SUBSTR(p.payment_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') THEN 1 ELSE 0 END +
                   CASE WHEN p.payment_date IS NOT NULL AND REGEXP_LIKE(SUBSTR(p.payment_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') AND TO_NUMBER(SUBSTR(p.payment_date, 1, 4)) > 2025 THEN 1 ELSE 0 END +
@@ -420,8 +435,9 @@ BEGIN
         (p.order_id IS NULL OR TRIM(p.order_id) IS NULL) OR
         (p.order_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM st_orders o WHERE o.order_id = p.order_id)) OR
         (p.amount IS NULL OR TRIM(p.amount) IS NULL) OR
-        (p.amount IS NOT NULL AND TO_NUMBER(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) < 0) OR
-        (p.amount IS NOT NULL AND p.order_id IS NOT NULL AND EXISTS (SELECT 1 FROM st_orders o WHERE o.order_id = p.order_id AND TO_NUMBER(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) > TO_NUMBER(REGEXP_REPLACE(o.amount, '[^0-9.-]', '')))) OR
+        (p.amount IS NOT NULL AND (REGEXP_REPLACE(p.amount, '[^0-9.-]', '') IS NULL OR LENGTH(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) = 0 OR NOT REGEXP_LIKE(TRIM(p.amount), '^-?[0-9]+\.?[0-9]*$'))) OR
+        (p.amount IS NOT NULL AND REGEXP_LIKE(TRIM(p.amount), '^-?[0-9]+\.?[0-9]*$') AND TO_NUMBER(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) < 0) OR
+        (p.amount IS NOT NULL AND p.order_id IS NOT NULL AND REGEXP_LIKE(TRIM(p.amount), '^-?[0-9]+\.?[0-9]*$') AND EXISTS (SELECT 1 FROM st_orders o WHERE o.order_id = p.order_id AND REGEXP_LIKE(TRIM(o.amount), '^-?[0-9]+\.?[0-9]*$') AND TO_NUMBER(REGEXP_REPLACE(p.amount, '[^0-9.-]', '')) > TO_NUMBER(REGEXP_REPLACE(o.amount, '[^0-9.-]', '')))) OR
         (p.payment_date IS NULL OR TRIM(p.payment_date) IS NULL) OR
         (p.payment_date IS NOT NULL AND TRIM(p.payment_date) NOT IN ('', 'NULL', 'N/A', 'null') AND NOT REGEXP_LIKE(SUBSTR(p.payment_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$')) OR
         (p.payment_date IS NOT NULL AND REGEXP_LIKE(SUBSTR(p.payment_date, 1, 10), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') AND TO_NUMBER(SUBSTR(p.payment_date, 1, 4)) > 2025) OR
