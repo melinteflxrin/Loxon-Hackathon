@@ -43,15 +43,23 @@ data_dir = os.path.abspath(os.path.join(script_dir, '..', 'data'))
 # Load data
 @st.cache_data
 def load_data():
+    # Load segmented customers (those with payment data)
     customer_segments = pd.read_csv(os.path.join(data_dir, 'customer_segments.csv'))
     
-    # Convert date columns
+    # Convert date columns with error handling
     date_columns = ['payment_date_min', 'payment_date_max', 'reg_date_first']
     for col in date_columns:
         if col in customer_segments.columns:
-            customer_segments[col] = pd.to_datetime(customer_segments[col])
+            customer_segments[col] = pd.to_datetime(customer_segments[col], errors='coerce')
     
-    return customer_segments
+    # Load customer summary (all customers)
+    try:
+        customer_summary = pd.read_csv(os.path.join(data_dir, 'customer_summary.csv'))
+        customer_summary['reg_date'] = pd.to_datetime(customer_summary['reg_date'], errors='coerce')
+    except:
+        customer_summary = None
+    
+    return customer_segments, customer_summary
 
 @st.cache_data
 def load_anomaly_data():
@@ -59,41 +67,41 @@ def load_anomaly_data():
         customer_anomaly = pd.read_csv(os.path.join(data_dir, 'customer_anomaly_detection.csv'))
         transaction_fraud = pd.read_csv(os.path.join(data_dir, 'transaction_fraud_detection.csv'))
         
-        # Convert date columns
+        # Convert date columns with error handling
         if 'order_date' in transaction_fraud.columns:
-            transaction_fraud['order_date'] = pd.to_datetime(transaction_fraud['order_date'])
+            transaction_fraud['order_date'] = pd.to_datetime(transaction_fraud['order_date'], errors='coerce')
         if 'payment_date' in transaction_fraud.columns:
-            transaction_fraud['payment_date'] = pd.to_datetime(transaction_fraud['payment_date'])
+            transaction_fraud['payment_date'] = pd.to_datetime(transaction_fraud['payment_date'], errors='coerce')
         
         return customer_anomaly, transaction_fraud
     except Exception as e:
         return None, None
 
-# Segment names and descriptions
+# Segment names and descriptions (based on actual data analysis)
 SEGMENT_INFO = {
     0: {
-        'name': 'Problem Customers',
-        'color': '#e74c3c',
-        'description': 'High payment delays, low activity, credit risk',
-        'recommendation': 'Implement stricter credit policies, send payment reminders, consider collection actions'
-    },
-    1: {
-        'name': 'VIP Customers',
-        'color': '#27ae60',
-        'description': 'Most active, highest spending, early payers',
-        'recommendation': 'Offer loyalty rewards, exclusive deals, priority support'
-    },
-    2: {
-        'name': 'Churned/Inactive',
-        'color': '#95a5a6',
-        'description': 'No recent activity, risk of permanent loss',
-        'recommendation': 'Launch re-engagement campaigns, special comeback offers, surveys'
-    },
-    3: {
         'name': 'Standard Customers',
         'color': '#3498db',
-        'description': 'Moderate activity, slight payment delays',
-        'recommendation': 'Maintain relationship, encourage more frequent purchases, payment reminders'
+        'description': 'Average payment behavior, moderate spend (2.5 payments avg, 6.5K total)',
+        'recommendation': 'Maintain relationship, encourage more frequent purchases'
+    },
+    1: {
+        'name': 'Low-Value Customers',
+        'color': '#95a5a6',
+        'description': 'Low activity, small amounts (1.7 payments avg, 1.3K total)',
+        'recommendation': 'Re-engagement campaigns, incentivize larger purchases'
+    },
+    2: {
+        'name': 'VIP Customers',
+        'color': '#27ae60',
+        'description': 'Highest activity and spending (14.4 payments avg, 27K total)',
+        'recommendation': 'Offer loyalty rewards, exclusive deals, priority support'
+    },
+    3: {
+        'name': 'Problem Customers',
+        'color': '#e74c3c',
+        'description': 'Very high payment delays (1,375 days avg), credit risk',
+        'recommendation': 'Implement stricter credit policies, send payment reminders, collection actions'
     }
 }
 
@@ -104,7 +112,7 @@ def main():
     
     # Load data
     try:
-        df = load_data()
+        df, customer_summary = load_data()
         customer_anomaly, transaction_fraud = load_anomaly_data()
     except Exception as e:
         st.error(f"Error loading data: {e}")
@@ -141,7 +149,7 @@ def main():
     
     # Route to different pages
     if page == "📊 Customer Segmentation":
-        show_segmentation_page(filtered_df, selected_segments, available_segments)
+        show_segmentation_page(filtered_df, selected_segments, available_segments, customer_summary)
     elif page == "🚨 Anomaly & Fraud Detection":
         show_fraud_detection_page(customer_anomaly, transaction_fraud, df)
     elif page == "🎯 Segment Predictor":
@@ -149,20 +157,24 @@ def main():
     else:
         show_combined_analysis_page(filtered_df, customer_anomaly, transaction_fraud, selected_segments, available_segments)
 
-def show_segmentation_page(filtered_df, selected_segments, available_segments):
+def show_segmentation_page(filtered_df, selected_segments, available_segments, customer_summary):
     """Original segmentation dashboard"""
     # Overview metrics
     st.markdown("---")
     st.subheader("📈 Overview Metrics")
     
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
-        st.metric("Total Customers", len(filtered_df))
+        total_customers = len(customer_summary) if customer_summary is not None else len(filtered_df)
+        st.metric("Total Customers", total_customers)
     with col2:
-        st.metric("Total Orders", int(filtered_df['order_id_nunique'].sum()))
+        customers_with_payments = len(filtered_df)
+        st.metric("With Payment Data", customers_with_payments)
     with col3:
-        st.metric("Total Payments", int(filtered_df['payment_id_count'].sum()))
+        st.metric("Total Orders", int(filtered_df['order_id_nunique'].sum()))
     with col4:
+        st.metric("Total Payments", int(filtered_df['payment_id_count'].sum()))
+    with col5:
         st.metric("Total Revenue", f"{filtered_df['amount_sum'].sum():,.0f} HUF")
     
     # Segment distribution
@@ -743,81 +755,81 @@ def show_prediction_page():
         st.markdown("#### Choose a preset customer profile:")
         
         presets = {
-            "High-Value Active Customer": {
-                'order_id_nunique': 5,
-                'payment_id_count': 10,
-                'amount_sum': 10000,
-                'amount_mean': 1000,
-                'amount_median': 950,
-                'amount_std': 200,
-                'amount_order_sum': 10200,
-                'amount_order_mean': 1020,
-                'amount_order_median': 1000,
-                'payment_delay_days_mean': -50,
-                'payment_delay_days_median': -45,
-                'payment_delay_days_min': -80,
-                'payment_delay_days_max': -10,
-                'payment_delay_days_std': 20,
-                'recency_days': 30,
-                'customer_lifetime_days': 365,
-                'payment_frequency': 0.027
+            "VIP Customer (Highest Value)": {
+                'order_id_nunique': 10,
+                'payment_id_count': 15,
+                'amount_sum': 28000,
+                'amount_mean': 1867,
+                'amount_median': 1850,
+                'amount_std': 350,
+                'amount_order_sum': 28500,
+                'amount_order_mean': 1900,
+                'amount_order_median': 1880,
+                'payment_delay_days_mean': -170,
+                'payment_delay_days_median': -165,
+                'payment_delay_days_min': -300,
+                'payment_delay_days_max': -50,
+                'payment_delay_days_std': 80,
+                'recency_days': 980,
+                'customer_lifetime_days': 1800,
+                'payment_frequency': 0.0083
             },
-            "Late Payer": {
-                'order_id_nunique': 1,
-                'payment_id_count': 1,
-                'amount_sum': 800,
-                'amount_mean': 800,
-                'amount_median': 800,
-                'amount_std': 0,
-                'amount_order_sum': 850,
-                'amount_order_mean': 850,
-                'amount_order_median': 850,
-                'payment_delay_days_mean': 300,
-                'payment_delay_days_median': 300,
-                'payment_delay_days_min': 300,
-                'payment_delay_days_max': 300,
-                'payment_delay_days_std': 0,
-                'recency_days': 250,
-                'customer_lifetime_days': 600,
-                'payment_frequency': 0.002
+            "Problem Customer (High Payment Delays)": {
+                'order_id_nunique': 2,
+                'payment_id_count': 3,
+                'amount_sum': 7000,
+                'amount_mean': 2333,
+                'amount_median': 2300,
+                'amount_std': 400,
+                'amount_order_sum': 7200,
+                'amount_order_mean': 2400,
+                'amount_order_median': 2400,
+                'payment_delay_days_mean': 1400,
+                'payment_delay_days_median': 1350,
+                'payment_delay_days_min': 800,
+                'payment_delay_days_max': 2000,
+                'payment_delay_days_std': 600,
+                'recency_days': 550,
+                'customer_lifetime_days': 1200,
+                'payment_frequency': 0.0025
             },
-            "Inactive Customer": {
+            "Low-Value Customer": {
                 'order_id_nunique': 1,
                 'payment_id_count': 2,
-                'amount_sum': 1500,
-                'amount_mean': 750,
-                'amount_median': 750,
-                'amount_std': 50,
-                'amount_order_sum': 1550,
-                'amount_order_mean': 775,
-                'amount_order_median': 775,
-                'payment_delay_days_mean': -200,
-                'payment_delay_days_median': -200,
-                'payment_delay_days_min': -220,
-                'payment_delay_days_max': -180,
-                'payment_delay_days_std': 20,
-                'recency_days': 500,
-                'customer_lifetime_days': 700,
-                'payment_frequency': 0.003
+                'amount_sum': 1300,
+                'amount_mean': 650,
+                'amount_median': 650,
+                'amount_std': 100,
+                'amount_order_sum': 1350,
+                'amount_order_mean': 675,
+                'amount_order_median': 675,
+                'payment_delay_days_mean': -350,
+                'payment_delay_days_median': -340,
+                'payment_delay_days_min': -450,
+                'payment_delay_days_max': -250,
+                'payment_delay_days_std': 100,
+                'recency_days': 960,
+                'customer_lifetime_days': 1500,
+                'payment_frequency': 0.0013
             },
             "Standard Customer": {
                 'order_id_nunique': 2,
-                'payment_id_count': 4,
-                'amount_sum': 4000,
-                'amount_mean': 1000,
-                'amount_median': 950,
-                'amount_std': 100,
-                'amount_order_sum': 4100,
-                'amount_order_mean': 1025,
-                'amount_order_median': 1000,
-                'payment_delay_days_mean': 50,
-                'payment_delay_days_median': 45,
-                'payment_delay_days_min': 10,
-                'payment_delay_days_max': 90,
-                'payment_delay_days_std': 30,
-                'recency_days': 90,
-                'customer_lifetime_days': 250,
-                'payment_frequency': 0.016
+                'payment_id_count': 3,
+                'amount_sum': 6500,
+                'amount_mean': 2167,
+                'amount_median': 2150,
+                'amount_std': 300,
+                'amount_order_sum': 6650,
+                'amount_order_mean': 2217,
+                'amount_order_median': 2200,
+                'payment_delay_days_mean': -60,
+                'payment_delay_days_median': -55,
+                'payment_delay_days_min': -120,
+                'payment_delay_days_max': 10,
+                'payment_delay_days_std': 50,
+                'recency_days': 1020,
+                'customer_lifetime_days': 1600,
+                'payment_frequency': 0.0019
             }
         }
         
