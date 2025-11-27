@@ -242,8 +242,8 @@ BEGIN
                   CASE WHEN o.customer_id IS NULL OR TRIM(o.customer_id) IS NULL THEN 1 ELSE 0 END +
                   CASE WHEN o.customer_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM st_customers c WHERE c.customer_id = o.customer_id) THEN 1 ELSE 0 END +
                   CASE WHEN o.amount IS NULL OR TRIM(o.amount) IS NULL THEN 1 ELSE 0 END +
-                  CASE WHEN o.amount IS NOT NULL AND (REGEXP_REPLACE(o.amount, '[^0-9.-]', '') IS NULL OR LENGTH(REGEXP_REPLACE(o.amount, '[^0-9.-]', '')) = 0 OR NOT REGEXP_LIKE(TRIM(o.amount), '^-?[0-9]+\.?[0-9]*$')) THEN 1 ELSE 0 END +
-                  CASE WHEN o.amount IS NOT NULL AND REGEXP_LIKE(TRIM(o.amount), '^-?[0-9]+\.?[0-9]*$') AND TO_NUMBER(REGEXP_REPLACE(o.amount, '[^0-9.-]', '')) < 0 AND UPPER(NVL(o.currency, '')) != 'REFUND' THEN 1 ELSE 0 END +
+                  CASE WHEN o.amount IS NOT NULL AND TRIM(o.amount) NOT IN ('', 'NULL', 'N/A', 'null', 'unknown') AND (LENGTH(REGEXP_REPLACE(o.amount, '[^0-9.-]', '')) = 0 OR UPPER(TRIM(o.amount)) = 'N/A' OR UPPER(TRIM(o.amount)) = 'UNKNOWN') THEN 1 ELSE 0 END +
+                  CASE WHEN o.amount IS NOT NULL AND TRIM(o.amount) NOT IN ('', 'NULL', 'N/A', 'null', 'unknown') AND LENGTH(REGEXP_REPLACE(o.amount, '[^0-9.-]', '')) > 0 AND REGEXP_REPLACE(o.amount, '[^0-9.-]', '') IS NOT NULL AND TO_NUMBER(REGEXP_REPLACE(o.amount, '[^0-9.-]', '')) < 0 AND UPPER(NVL(o.currency, '')) != 'REFUND' THEN 1 ELSE 0 END +
                   CASE WHEN o.currency IS NULL OR TRIM(o.currency) IS NULL THEN 1 ELSE 0 END +
                   CASE WHEN o.currency IS NOT NULL AND UPPER(o.currency) NOT IN ('USD', 'EUR', 'GBP', 'HUF', 'RON', 'REFUND', 'US$', 'EURO', '$', '€') THEN 1 ELSE 0 END +
                   CASE WHEN o.order_date IS NULL OR TRIM(o.order_date) IS NULL THEN 1 ELSE 0 END +
