@@ -203,8 +203,10 @@ CREATE OR REPLACE PACKAGE BODY pkg_data_quality AS
     BEGIN
         DBMS_OUTPUT.PUT_LINE('--- STEP 2: Cleansing Customer Data ---');
         
-        -- Clear existing data
+        -- Clear existing data (disable constraints temporarily)
+        EXECUTE IMMEDIATE 'ALTER TABLE dw_orders DISABLE CONSTRAINT fk_orders_customer';
         DELETE FROM dw_customers;
+        COMMIT;
         
         -- Insert cleansed data
         INSERT INTO dw_customers (
@@ -234,6 +236,10 @@ CREATE OR REPLACE PACKAGE BODY pkg_data_quality AS
         
         v_count := SQL%ROWCOUNT;
         COMMIT;
+        
+        -- Re-enable constraints
+        EXECUTE IMMEDIATE 'ALTER TABLE dw_orders ENABLE CONSTRAINT fk_orders_customer';
+        
         DBMS_OUTPUT.PUT_LINE('  Customers cleansed: ' || v_count);
     END step2_cleanse_customers;
 
@@ -245,7 +251,10 @@ CREATE OR REPLACE PACKAGE BODY pkg_data_quality AS
     BEGIN
         DBMS_OUTPUT.PUT_LINE('--- STEP 3: Cleansing Order Data ---');
         
+        -- Clear existing data
+        EXECUTE IMMEDIATE 'ALTER TABLE dw_payments DISABLE CONSTRAINT fk_payments_order';
         DELETE FROM dw_orders;
+        COMMIT;
         
         INSERT INTO dw_orders (
             order_id, customer_id, customer_id_raw, customer_valid,
@@ -274,6 +283,10 @@ CREATE OR REPLACE PACKAGE BODY pkg_data_quality AS
         
         v_count := SQL%ROWCOUNT;
         COMMIT;
+        
+        -- Re-enable constraints
+        EXECUTE IMMEDIATE 'ALTER TABLE dw_payments ENABLE CONSTRAINT fk_payments_order';
+        
         DBMS_OUTPUT.PUT_LINE('  Orders cleansed: ' || v_count);
     END step3_cleanse_orders;
 
