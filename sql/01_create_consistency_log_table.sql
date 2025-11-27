@@ -35,7 +35,6 @@ CREATE TABLE lxn_data_consistency_log (
     cust_invalid_phone          NUMBER(1) DEFAULT 0,
     cust_missing_reg_date       NUMBER(1) DEFAULT 0,
     cust_invalid_reg_date       NUMBER(1) DEFAULT 0,
-    cust_future_reg_date        NUMBER(1) DEFAULT 0,
     
     -- ORDER VALIDATION FLAGS (0 = Pass, 1 = Fail)
     ord_missing_id              NUMBER(1) DEFAULT 0,
@@ -48,7 +47,6 @@ CREATE TABLE lxn_data_consistency_log (
     ord_invalid_currency        NUMBER(1) DEFAULT 0,  -- Unknown currency code
     ord_missing_order_date      NUMBER(1) DEFAULT 0,
     ord_invalid_order_date      NUMBER(1) DEFAULT 0,  -- Unparseable date
-    ord_future_order_date       NUMBER(1) DEFAULT 0,  -- Order date in future
     ord_order_before_signup     NUMBER(1) DEFAULT 0,  -- Order date < customer signup date
     
     -- PAYMENT VALIDATION FLAGS (0 = Pass, 1 = Fail)
@@ -61,7 +59,6 @@ CREATE TABLE lxn_data_consistency_log (
     pay_amount_exceeds_order    NUMBER(1) DEFAULT 0,  -- payment.amount > order.amount
     pay_missing_payment_date    NUMBER(1) DEFAULT 0,
     pay_invalid_payment_date    NUMBER(1) DEFAULT 0,  -- Unparseable date
-    pay_future_payment_date     NUMBER(1) DEFAULT 0,  -- Payment date in future
     pay_date_before_order       NUMBER(1) DEFAULT 0,  -- payment_date < order_date
     pay_missing_method          NUMBER(1) DEFAULT 0,
     pay_invalid_method          NUMBER(1) DEFAULT 0,  -- Unknown payment method
@@ -87,10 +84,10 @@ BEGIN
     DBMS_OUTPUT.PUT_LINE('TABLE CREATED SUCCESSFULLY');
     DBMS_OUTPUT.PUT_LINE('========================================');
     DBMS_OUTPUT.PUT_LINE('Table: LXN_DATA_CONSISTENCY_LOG');
-    DBMS_OUTPUT.PUT_LINE('Customer validation flags: 9');
-    DBMS_OUTPUT.PUT_LINE('Order validation flags: 12');
-    DBMS_OUTPUT.PUT_LINE('Payment validation flags: 13');
-    DBMS_OUTPUT.PUT_LINE('Total validation rules: 34');
+    DBMS_OUTPUT.PUT_LINE('Customer validation flags: 8');
+    DBMS_OUTPUT.PUT_LINE('Order validation flags: 11');
+    DBMS_OUTPUT.PUT_LINE('Payment validation flags: 12');
+    DBMS_OUTPUT.PUT_LINE('Total validation rules: 31');
     DBMS_OUTPUT.PUT_LINE('========================================');
 END;
 /
