@@ -204,8 +204,12 @@ CREATE OR REPLACE PACKAGE BODY pkg_data_quality AS
         DBMS_OUTPUT.PUT_LINE('--- STEP 2: Cleansing Customer Data ---');
         
         -- Clear existing data (disable constraints temporarily)
-        EXECUTE IMMEDIATE 'ALTER TABLE dw_orders DISABLE CONSTRAINT fk_orders_customer';
-        DELETE FROM dw_customers;
+        BEGIN
+            EXECUTE IMMEDIATE 'ALTER TABLE dw_orders DISABLE CONSTRAINT fk_orders_customer';
+        EXCEPTION WHEN OTHERS THEN NULL;
+        END;
+        
+        EXECUTE IMMEDIATE 'TRUNCATE TABLE dw_customers';
         COMMIT;
         
         -- Insert cleansed data
@@ -238,7 +242,10 @@ CREATE OR REPLACE PACKAGE BODY pkg_data_quality AS
         COMMIT;
         
         -- Re-enable constraints
-        EXECUTE IMMEDIATE 'ALTER TABLE dw_orders ENABLE CONSTRAINT fk_orders_customer';
+        BEGIN
+            EXECUTE IMMEDIATE 'ALTER TABLE dw_orders ENABLE CONSTRAINT fk_orders_customer';
+        EXCEPTION WHEN OTHERS THEN NULL;
+        END;
         
         DBMS_OUTPUT.PUT_LINE('  Customers cleansed: ' || v_count);
     END step2_cleanse_customers;
@@ -252,8 +259,12 @@ CREATE OR REPLACE PACKAGE BODY pkg_data_quality AS
         DBMS_OUTPUT.PUT_LINE('--- STEP 3: Cleansing Order Data ---');
         
         -- Clear existing data
-        EXECUTE IMMEDIATE 'ALTER TABLE dw_payments DISABLE CONSTRAINT fk_payments_order';
-        DELETE FROM dw_orders;
+        BEGIN
+            EXECUTE IMMEDIATE 'ALTER TABLE dw_payments DISABLE CONSTRAINT fk_payments_order';
+        EXCEPTION WHEN OTHERS THEN NULL;
+        END;
+        
+        EXECUTE IMMEDIATE 'TRUNCATE TABLE dw_orders';
         COMMIT;
         
         INSERT INTO dw_orders (
@@ -285,7 +296,10 @@ CREATE OR REPLACE PACKAGE BODY pkg_data_quality AS
         COMMIT;
         
         -- Re-enable constraints
-        EXECUTE IMMEDIATE 'ALTER TABLE dw_payments ENABLE CONSTRAINT fk_payments_order';
+        BEGIN
+            EXECUTE IMMEDIATE 'ALTER TABLE dw_payments ENABLE CONSTRAINT fk_payments_order';
+        EXCEPTION WHEN OTHERS THEN NULL;
+        END;
         
         DBMS_OUTPUT.PUT_LINE('  Orders cleansed: ' || v_count);
     END step3_cleanse_orders;
@@ -298,7 +312,7 @@ CREATE OR REPLACE PACKAGE BODY pkg_data_quality AS
     BEGIN
         DBMS_OUTPUT.PUT_LINE('--- STEP 4: Cleansing Payment Data ---');
         
-        DELETE FROM dw_payments;
+        EXECUTE IMMEDIATE 'TRUNCATE TABLE dw_payments';
         
         INSERT INTO dw_payments (
             payment_id, order_id, order_valid,
