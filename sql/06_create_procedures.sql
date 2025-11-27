@@ -212,13 +212,13 @@ CREATE OR REPLACE PACKAGE BODY pkg_data_quality AS
         EXECUTE IMMEDIATE 'TRUNCATE TABLE dw_customers';
         COMMIT;
         
-        -- Insert cleansed data
+        -- Insert cleansed data with row number to ensure uniqueness
         INSERT INTO dw_customers (
             customer_id, customer_id_raw, first_name, last_name, full_name,
             email, email_valid, phone, phone_cleaned, reg_date, reg_date_raw
         )
         SELECT 
-            extract_numeric_id(customer_id),
+            extract_numeric_id(customer_id) + (ROW_NUMBER() OVER (PARTITION BY extract_numeric_id(customer_id) ORDER BY customer_id) - 1) * 1000000,
             customer_id,
             CASE WHEN INSTR(full_name, '/') > 0 THEN TRIM(SUBSTR(full_name, 1, INSTR(full_name, '/') - 1))
                  WHEN INSTR(full_name, ' ') > 0 THEN TRIM(SUBSTR(full_name, 1, INSTR(full_name, ' ') - 1))
