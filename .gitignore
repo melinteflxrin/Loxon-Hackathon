@@ -222,3 +222,6 @@ data/*.csv
 /output/
 output/*.png
 output/*.csv
+
+# sqldeveloper tables
+/database_tables/
