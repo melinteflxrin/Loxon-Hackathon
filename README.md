@@ -19,3 +19,5 @@
 - `01_create_consistency_log_table.sql` - Creates validation table with 31 data quality flags
 - `02_validate_and_populate_log.sql` - Validates data, logs 1,228 issues
 - `03_query_consistency_log.sql` - 9 analytical queries for data quality insights
+- `04_customer_payment_behavior_segmentation.sql` - Creates 7 views: behavior segments, revenue quartiles, top/risky customers (requires CREATE VIEW privilege)
+- `04b_customer_payment_behavior_queries.sql` - Same 7 reports as standalone queries (no special privileges needed)
